@@ -159,7 +159,12 @@ def test_model_json_roundtrip_preserves_batch_and_single_predictions(tmp_path):
         path = _write_artifact(tmp_path / "predictor.json", model.artifact)
         reloaded = ErrorPredictor.load(path)
         np.testing.assert_array_equal(reloaded.predict(x), expected)
-        np.testing.assert_array_equal(reloaded.predict(x[0]), expected[0])
+        np.testing.assert_array_equal(reloaded.predict(x[0]), model.predict(x[0]))
+        # GEMV and batched GEMM may reduce floating-point products in different
+        # orders on different BLAS/CPU builds. Serialization still stays exact
+        # for the same input shape, while these two evaluation paths need a
+        # double-precision numerical comparison rather than bitwise identity.
+        np.testing.assert_allclose(reloaded.predict(x[0]), expected[0], rtol=1e-14, atol=1e-15)
         with pytest.raises(ValueError, match="finite"):
             reloaded.predict(np.full(x.shape[1], np.nan))
         with pytest.raises(ValueError, match="shape"):
