@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install -e '.[dev]'
-      - run: python -m pytest -q
-      - run: python -m myo rollout --seconds 1 --controller heuristic
+      - run: python3 -m pip install -e '.[dev]'
+      - run: python3 -m pytest -q
+      - run: python3 -m myo rollout --seconds 1 --controller heuristic
 

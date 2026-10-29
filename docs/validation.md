@@ -20,7 +20,7 @@ GPU, Unreal Engine, графический дисплей и анатомиче�
 ## Автоматические тесты
 
 ```bash
-OPENBLAS_NUM_THREADS=1 python -m pytest -q
+OPENBLAS_NUM_THREADS=1 python3 -m pytest -q
 ```
 
 **76 passed**, одно предупреждение SB3, время данного запуска 7.85 s.
@@ -71,7 +71,7 @@ time limit без физического termination. Проверены зна�
 ## Диагностический контроллер
 
 ```bash
-python -m myo rollout --seconds 10 --controller heuristic --seed 0 \
+python3 -m myo rollout --seconds 10 --controller heuristic --seed 0 \
   --output runs/curl-smoke.jsonl
 ```
 
@@ -95,9 +95,9 @@ Mean `env.step` около 1.54 ms, p95 около 2.23 ms; один вызов 
 ## Предиктор
 
 ```bash
-python -m myo.predictor collect --episodes 8 --horizon 0.1 \
+python3 -m myo.predictor collect --episodes 8 --horizon 0.1 \
   --controller heuristic --output runs/predictor-data-smoke.npz
-OPENBLAS_NUM_THREADS=1 python -m myo.predictor train \
+OPENBLAS_NUM_THREADS=1 python3 -m myo.predictor train \
   --data runs/predictor-data-smoke.npz --epochs 100 \
   --output runs/predictor-smoke.json
 ```
@@ -125,9 +125,9 @@ Wrapper проверен в реальном цикле env. С данным о�
 ## PPO: короткий smoke и стандартный бюджет
 
 ```bash
-python -m myo.train --steps 4096 --seed 0 --threads 1 \
+python3 -m myo.train --steps 4096 --seed 0 --threads 1 \
   --output runs/ppo-smoke.zip
-python -m myo rollout --controller runs/ppo-smoke.zip --seconds 10 --seed 100
+python3 -m myo rollout --controller runs/ppo-smoke.zip --seconds 10 --seed 100
 ```
 
 После 4096 transitions checkpoint успешно загрузился. На одном 10-секундном
@@ -138,9 +138,9 @@ python -m myo rollout --controller runs/ppo-smoke.zip --seconds 10 --seed 100
 Затем выполнен стандартный бюджет из README:
 
 ```bash
-python -m myo.train --steps 100000 --seed 0 --threads 1 \
+python3 -m myo.train --steps 100000 --seed 0 --threads 1 \
   --output runs/ppo-100k.zip
-python -m myo rollout --controller runs/ppo-100k.zip --seconds 10 --seed 100
+python3 -m myo rollout --controller runs/ppo-100k.zip --seconds 10 --seed 100
 ```
 
 Фактически выполнено **100096 transitions** (782 полных PPO rollout chunks).

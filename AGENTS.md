@@ -24,7 +24,8 @@ docs/roadmap.md before changing its scope. User instructions take precedence.
 ## Workflow
 
 - Python code and identifiers are English; project documentation is Russian.
-- Use the project virtual environment. Run `python -m pytest -q` for changes to
+- Use `python3` explicitly, including in the project virtual environment.
+  Run `python3 -m pytest -q` for changes to
   dynamics, timing, observations, reward or serialization.
 - Report actual validation commands and results in docs/validation.md. A short
   training smoke test demonstrates plumbing, not a successful motor policy.

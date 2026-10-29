@@ -41,19 +41,19 @@ headless режима. Основные зависимости: MuJoCo 3.17, Gym
 Точные проверенные версии приведены в `requirements-verified.txt`.
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e '.[dev]'
+python3 -m pip install -e '.[dev]'
 
-python -m pytest -q
-python -m myo rollout --seconds 10 --controller heuristic
-python -m myo rollout --seconds 10 --controller zero
+python3 -m pytest -q
+python3 -m myo rollout --seconds 10 --controller heuristic
+python3 -m myo rollout --seconds 10 --controller zero
 ```
 
 Для обычного окна MuJoCo нужен рабочий графический дисплей:
 
 ```bash
-python -m myo rollout --seconds 20 --viewer --realtime
+python3 -m myo rollout --seconds 20 --viewer --realtime
 ```
 
 `--realtime` ограничивает темп по часам и не изменяет шаг физики. Без этого флага
@@ -63,7 +63,7 @@ python -m myo rollout --seconds 20 --viewer --realtime
 Полная конфигурация первого демо: [configs/preacher_curl.json](configs/preacher_curl.json).
 
 ```bash
-python -m myo rollout --config configs/preacher_curl.json \
+python3 -m myo rollout --config configs/preacher_curl.json \
   --seconds 10 --output runs/curl.jsonl
 ```
 
@@ -73,13 +73,13 @@ PyTorch и Stable-Baselines3 нужны только для PPO. На Linux/Wind
 сначала установить CPU-сборку PyTorch из официального индекса:
 
 ```bash
-python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-python -m pip install -e '.[train]'
+python3 -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python3 -m pip install -e '.[train]'
 
-python -m myo.train --steps 100000 --seed 0 --threads 1 \
+python3 -m myo.train --steps 100000 --seed 0 --threads 1 \
   --output runs/ppo_curl.zip
 
-python -m myo rollout --controller runs/ppo_curl.zip --seconds 10
+python3 -m myo rollout --controller runs/ppo_curl.zip --seconds 10
 ```
 
 Число шагов — бюджет запуска, не обещание сходимости. PPO округляет бюджет до
@@ -103,16 +103,16 @@ python -m myo rollout --controller runs/ppo_curl.zip --seconds 10
 Проверка пути данных на диагностическом контроллере:
 
 ```bash
-python -m myo.predictor collect --episodes 12 --horizon 0.1 \
+python3 -m myo.predictor collect --episodes 12 --horizon 0.1 \
   --controller heuristic --output runs/predictor_data.npz
 
-python -m myo.predictor train --data runs/predictor_data.npz \
+python3 -m myo.predictor train --data runs/predictor_data.npz \
   --epochs 100 --output runs/predictor.json
 
-python -m myo.train --steps 100000 --predictor runs/predictor.json \
+python3 -m myo.train --steps 100000 --predictor runs/predictor.json \
   --output runs/ppo_with_predictor.zip
 
-python -m myo rollout --controller runs/ppo_with_predictor.zip --seconds 10
+python3 -m myo rollout --controller runs/ppo_with_predictor.zip --seconds 10
 ```
 
 Для эксперимента с обученным контроллером в `collect --controller` нужно передать
@@ -124,7 +124,7 @@ python -m myo rollout --controller runs/ppo_with_predictor.zip --seconds 10
 ## Визуализация и реальное время
 
 ```bash
-python -m myo rollout --controller heuristic --seconds 20 --realtime \
+python3 -m myo rollout --controller heuristic --seconds 20 --realtime \
   --udp-port 7001 --output runs/visualization.jsonl
 ```
 
