@@ -12,10 +12,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: python3 -m pip install -e '.[dev]'
-      - run: python3 -m pytest -q
-      - run: python3 -m myo rollout --seconds 1 --controller heuristic
+      - name: Install uv
+        run: |
+          set -euo pipefail
+          curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$RUNNER_TEMP/myo-uv" UV_NO_MODIFY_PATH=1 sh
+          echo "$RUNNER_TEMP/myo-uv" >> "$GITHUB_PATH"
+      - name: Recover an incomplete environment and install the project
+        run: |
+          mkdir .venv
+          echo keep-me > .venv/recovery-marker
+          bash scripts/setup.sh
+          test "$(cat .venv-backup.*/.venv/recovery-marker)" = keep-me
+      - run: .venv/bin/python3 -m pytest -q
+      - run: .venv/bin/python3 -m myo rollout --seconds 1 --controller heuristic
 

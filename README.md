@@ -36,19 +36,48 @@ heuristic на тех же эпизодах даёт **2.79–3.30°**. Это �
 
 ## Быстрый запуск
 
-Проверяемое базовое окружение — Python 3.12 на Linux, без GPU и без дисплея для
-headless режима. Основные зависимости: MuJoCo 3.17, Gymnasium 1.4 и NumPy 2.
+Проверяемое базовое окружение — **Python 3.12 на Linux**, без GPU и без дисплея
+для headless режима. Системный `python3` может оказаться Python 3.10; для текущего
+проекта он не подходит. Основные зависимости: MuJoCo 3.17, Gymnasium 1.4 и NumPy 2.
 Точные проверенные версии приведены в `requirements-verified.txt`.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -e '.[dev]'
+Для установки используется `uv`: он скачивает отдельный Python 3.12 и создаёт
+окружение без системного `ensurepip` и пакета `python3.10-venv`. Установка `uv`
+нужна один раз:
 
-python3 -m pytest -q
-python3 -m myo rollout --seconds 10 --controller heuristic
-python3 -m myo rollout --seconds 10 --controller zero
+```bash
+(
+  set -euo pipefail
+  curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$HOME/.local/bin" sh
+)
 ```
+
+Из каталога репозитория выполнить:
+
+```bash
+(
+  set -euo pipefail
+  export PATH="$HOME/.local/bin:$PATH"
+  bash scripts/setup.sh
+  .venv/bin/python3 -m pytest -q
+  .venv/bin/python3 -m myo rollout --seconds 10 --controller heuristic
+)
+```
+
+Скобки запускают команды в отдельной оболочке, которая останавливается на первой
+ошибке. `setup.sh` сохраняет несовместимую или недособранную `.venv` в отдельную
+папку `.venv-backup.*`; исправное окружение Python 3.12 использует повторно.
+Во время установки пакеты адресуются явно в `.venv`.
+
+Для следующих команд активировать готовое окружение в текущем терминале:
+
+```bash
+source .venv/bin/activate
+python3 --version
+```
+
+Ожидается Python 3.12.x. Подробности, альтернативный способ при уже установленном
+Python 3.12 и разбор ошибок: [docs/installation.md](docs/installation.md).
 
 Для обычного окна MuJoCo нужен рабочий графический дисплей:
 
@@ -157,6 +186,7 @@ Flesh/ML Deformer не изменяют физику через неявную �
 | `src/myo/predictor.py` | Датасет, обучение предиктора, runtime wrapper |
 | `src/myo/runtime.py`, `cli.py`, `telemetry.py` | Проверка checkpoint contract, запуск, JSONL/UDP |
 | `tests/` | Проверки динамики, причинности, данных и контрактов |
+| `scripts/setup.sh`, [installation.md](docs/installation.md) | Установка Python 3.12 и восстановление неполной виртуальной среды |
 | [architecture.md](docs/architecture.md) | Выбранные решения и их границы |
 | [model.md](docs/model.md) | Уравнения и ограничения модели V0 |
 | [experiments.md](docs/experiments.md) | Абляции, метрики и защита от утечки будущего |

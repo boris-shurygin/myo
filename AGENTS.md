@@ -24,6 +24,8 @@ docs/roadmap.md before changing its scope. User instructions take precedence.
 ## Workflow
 
 - Python code and identifiers are English; project documentation is Russian.
+- Bootstrap the tested Python 3.12 environment with `bash scripts/setup.sh`.
+  Do not assume the system `python3` meets the project's version requirements.
 - Use `python3` explicitly, including in the project virtual environment.
   Run `python3 -m pytest -q` for changes to
   dynamics, timing, observations, reward or serialization.
