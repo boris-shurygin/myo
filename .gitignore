@@ -1,0 +1,27 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+runs/
+data/
+checkpoints/
+*.npz
+*.zip
+*.onnx
+*.pt
+*.pth
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Unreal generated/build output. Source assets require a deliberate LFS decision.
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myo-character-lab"
+version = "0.1.0"
+description = "Experiments with muscle-actuated neural characters and effort-aware visualization"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.0,<3",
+  "mujoco>=3.17,<3.18",
+  "gymnasium>=1.4,<1.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9,<10"]
+train = ["stable-baselines3>=2.7,<3"]
+
+[project.scripts]
+myo = "myo.cli:main"
+myo-train = "myo.train:main"
+myo-predictor = "myo.predictor:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+myo = ["assets/*.xml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
