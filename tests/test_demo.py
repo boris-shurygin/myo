@@ -14,6 +14,7 @@ from myo.visualization import (
     append_arm_geometry,
     configure_camera,
     configure_options,
+    schematic_anchors,
 )
 
 
@@ -99,6 +100,42 @@ def test_fixed_pose_activation_changes_colors_without_moving_or_scaling_geometry
             np.broadcast_to(activation_rgba(0.90), (int(changed.sum()), 4)),
             atol=1e-7, rtol=0,
         )
+    finally:
+        env.close()
+
+
+@pytest.mark.parametrize("angle_degrees", [45, 75, 105])
+def test_brachialis_insertion_touches_the_drawn_ulna(angle_degrees):
+    env = PreacherCurlEnv()
+    try:
+        angle = float(np.deg2rad(angle_degrees))
+        env.reset(seed=3, options={"q": angle, "qvel": 0.0})
+        scene = mujoco.MjvScene(env.model, maxgeom=512)
+        append_arm_geometry(scene, env)
+        anchors = schematic_anchors(env.model, angle)
+        endpoint = next(path for path in anchors.muscles
+                        if path.name == "brachialis").control_points[-1]
+        geoms = [scene.geoms[index] for index in range(scene.ngeom)]
+        markers = [geom for geom in geoms
+                   if geom.type == mujoco.mjtGeom.mjGEOM_SPHERE
+                   and np.allclose(geom.pos, endpoint, atol=1e-7, rtol=0)]
+        # Identify the positive-Y forearm shaft without relying on geom order
+        # or recomputing its endpoints with the helper used by the renderer.
+        shafts = [geom for geom in geoms
+                  if geom.type == mujoco.mjtGeom.mjGEOM_CAPSULE
+                  and np.isclose(geom.size[0], 0.0075, atol=1e-8, rtol=0)
+                  and (anchors.forearm_rotation.T @ (geom.pos - anchors.elbow))[1] > 0]
+        assert len(markers) == len(shafts) == 1
+        marker, shaft = markers[0], shafts[0]
+        axis = shaft.mat.reshape(3, 3)[:, 2]
+        # MjvGeom stores capsule half-length in size[2], unlike MjModel.
+        along = np.clip(np.dot(marker.pos - shaft.pos, axis),
+                        -shaft.size[2], shaft.size[2])
+        nearest = shaft.pos + along * axis
+        # The marker's center must lie on the actual capsule surface, including
+        # its endcaps; a detached marker must fail even if its anchor is valid.
+        distance = np.linalg.norm(marker.pos - nearest)
+        assert distance == pytest.approx(float(shaft.size[0]), abs=1e-7)
     finally:
         env.close()
 

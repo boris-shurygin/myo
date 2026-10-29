@@ -43,6 +43,7 @@ _HANDLE = (0.60, 0.66, 0.69, 1.0)
 _PATH_SEGMENTS = 20
 _BELLY_START = 0.15
 _BELLY_END = 0.80
+_FOREARM_BONES = {"radius": (-0.009, -0.014), "ulna": (0.009, 0.014)}
 
 
 @dataclass(frozen=True)
@@ -95,6 +96,34 @@ def _axis_rotation(axis: np.ndarray, angle: float) -> np.ndarray:
     return np.eye(3) + np.sin(angle) * skew + (1.0 - np.cos(angle)) * (skew @ skew)
 
 
+def forearm_bone_axis(name: str, length: float) -> tuple[np.ndarray, np.ndarray, float]:
+    """Return one schematic shaft's endpoints/radius in the elbow-local frame.
+
+    Both drawing and attachments use this geometry. The local frame has the
+    forearm's orientation and points down the shaft along negative Z.
+    """
+    if not np.isfinite(length) or length <= 0.060:
+        raise ValueError("The schematic forearm length must exceed 60 mm.")
+    x, y = _FOREARM_BONES[name]
+    return np.array((x, y, -0.030)), np.array((0.75 * x, 0.75 * y, -length + 0.030)), 0.0075
+
+
+def forearm_bone_surface(name: str, length: float, toward_local: np.ndarray) -> np.ndarray:
+    """Find the closest capsule surface toward an illustrative attachment point."""
+    start, end, radius = forearm_bone_axis(name, length)
+    target = np.asarray(toward_local, dtype=np.float64)
+    if target.shape != (3,) or not np.isfinite(target).all():
+        raise ValueError("The attachment reference must be a finite 3D point.")
+    axis = end - start
+    fraction = np.clip(np.dot(target - start, axis) / np.dot(axis, axis), 0.0, 1.0)
+    nearest = start + fraction * axis
+    direction = target - nearest
+    distance = np.linalg.norm(direction)
+    if distance < 1e-12:
+        raise ValueError("The attachment reference must specify a side of the bone.")
+    return nearest + radius * direction / distance
+
+
 def schematic_anchors(model: mujoco.MjModel, elbow_angle: float) -> ArmAnchors:
     """Calculate V0 display anchors without changing ``model`` or ``MjData``.
 
@@ -132,8 +161,11 @@ def schematic_anchors(model: mujoco.MjModel, elbow_angle: float) -> ArmAnchors:
     def forearm(point):
         return forearm_origin + forearm_rotation @ np.asarray(point, dtype=np.float64)
 
-    # The endpoints sit on the schematic bone surfaces. Intermediate controls
-    # fan the paths apart, making near/far muscle bellies readable in one view.
+    # Brachialis attaches to the displayed ulna surface. Intermediate controls
+    # fan the schematic paths apart without moving that endpoint off its bone.
+    brachialis_insertion = elbow + forearm_rotation @ forearm_bone_surface(
+        "ulna", float(np.linalg.norm(wrist - elbow)), np.array((-0.008, 0.015, -0.060))
+    )
     paths = (
         SchematicMusclePath("biceps_long", np.asarray((
             upper((-0.009, -0.012, -0.020)),
@@ -151,7 +183,7 @@ def schematic_anchors(model: mujoco.MjModel, elbow_angle: float) -> ArmAnchors:
             upper((-0.010, 0.009, -0.130)),
             upper((-0.036, 0.036, -0.205)),
             forearm((-0.026, 0.026, -0.025)),
-            forearm((-0.008, 0.015, -0.060)),
+            brachialis_insertion,
         )), 0.008),
         SchematicMusclePath("triceps", np.asarray((
             upper((0.012, 0.007, -0.040)),
@@ -234,11 +266,11 @@ def _arm_shapes(anchors: ArmAnchors, activations: dict[str, float]) -> list[_Sha
     sphere(elbow - 0.023 * upper_axis, 0.017, _BONE_END)
 
     # Radius and ulna are two separate thin shafts, rather than a solid arm tube.
-    for x, y in ((-0.009, -0.014), (0.009, 0.014)):
-        offset = anchors.forearm_rotation @ np.array((x, y, 0.0))
-        proximal = elbow + 0.030 * forearm_axis + offset
-        distal = wrist - 0.030 * forearm_axis + 0.75 * offset
-        capsule(proximal, distal, 0.0075, _BONE)
+    for name in _FOREARM_BONES:
+        start, end, radius = forearm_bone_axis(name, float(np.linalg.norm(wrist - elbow)))
+        proximal = elbow + anchors.forearm_rotation @ start
+        distal = elbow + anchors.forearm_rotation @ end
+        capsule(proximal, distal, radius, _BONE)
         sphere(proximal, 0.0105, _BONE_END)
         sphere(distal, 0.009, _BONE_END)
     capsule(wrist - 0.035 * forearm_axis, wrist, 0.010, _BONE_END)
