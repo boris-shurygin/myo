@@ -2,6 +2,9 @@
 
 This repository is an experimental character-control project. Read README.md and
 docs/roadmap.md before changing its scope. User instructions take precedence.
+For the agreed next arm demo, also read docs/first-stage.md. It distinguishes
+planned control/history/protection from the implemented V0; the visual milestones
+are in integrations/unreal/README.md. Do not report a plan as working code.
 
 ## Invariants
 
@@ -20,6 +23,21 @@ docs/roadmap.md before changing its scope. User instructions take precedence.
   predictor identity with learned policies. Fail on incompatible checkpoints.
 - Keep training headless and local by default. Do not enable cloud tracking or
   download gated anatomy/motion/checkpoints without an explicit user request.
+
+## Next arm demo decisions
+
+- One muscle-control policy learns both user-command tracking and protective
+  braking. Do not add a separate safety network by default. Trigger release is
+  a request to relax, not a hard zero multiplier disabling protection.
+- Keep motor delay and activation dynamics on protective commands too. Do not
+  add an instant joint torque, reset velocity, or change the payload to rescue
+  the policy. Learned protection is not a formal safety guarantee.
+- Start with short sensor/action/command history and no separate predictor.
+  Evaluate the predictor later within D1 against that baseline. Visual work
+  need not wait for the predictor or final policy convergence.
+- Preserve proportionate scope: an articulated 1-DOF arm can have detailed 3D
+  visuals. UE is the presentation/input layer; Flesh is for tissue deformation,
+  not a prerequisite for compliant tendons in headless physics.
 
 ## Workflow
 
