@@ -76,18 +76,6 @@ def test_time_limit_is_truncation_and_finished_episode_requires_reset():
         env.close()
 
 
-@pytest.mark.parametrize("action", [np.zeros(3), [0, 0, 0, np.nan], [-0.1, 0, 0, 0], [0, 0, 0, 1.1]])
-def test_invalid_action_does_not_advance_simulation(action):
-    env = PreacherCurlEnv()
-    try:
-        env.reset(seed=4)
-        with pytest.raises(ValueError):
-            env.step(np.asarray(action))
-        assert env.time == 0
-    finally:
-        env.close()
-
-
 def test_rom_proxy_only_penalizes_encroachment_into_configured_margin():
     env = PreacherCurlEnv()
     try:

@@ -18,7 +18,6 @@ from myo.predictor import (
     PredictorObservationWrapper,
     collect_data,
     fit_predictor,
-    horizon_steps,
     make_episode_samples,
     split_episodes,
 )
@@ -111,25 +110,14 @@ def test_collector_labels_are_actual_future_errors_within_each_episode(tmp_path)
                 env.close()
 
 
-def test_grouped_split_never_places_one_episode_in_both_sets():
-    ids = np.tile(np.arange(8), 7)  # Deliberately interleaved rather than sorted.
-    train, validation = split_episodes(ids, seed=17)
-    assert np.all(train ^ validation)
-    assert train.any() and validation.any()
-    for episode in np.unique(ids):
-        selected = ids == episode
-        assert train[selected].all() or validation[selected].all()
-    other_train, other_validation = split_episodes(ids, seed=17)
-    np.testing.assert_array_equal(train, other_train)
-    np.testing.assert_array_equal(validation, other_validation)
-    with pytest.raises(ValueError, match="two whole episodes"):
-        split_episodes(np.zeros(10, dtype=int))
-
-
 def test_validation_outliers_cannot_leak_into_feature_or_target_normalization():
     rng = np.random.default_rng(5)
-    ids = np.repeat(np.arange(6), 8)
+    # Interleaving also catches a row-wise split instead of a whole-episode split.
+    ids = np.tile(np.arange(6), 8)
     train, validation = split_episodes(ids, seed=12)
+    assert np.all(train ^ validation)
+    assert train.any() and validation.any()
+    assert set(ids[train]).isdisjoint(ids[validation])
     x = rng.normal(size=(len(ids), 3))
     x[:, 1] = 7.0  # A constant training feature must receive a finite scale.
     y = np.column_stack((0.1 * x[:, 0], np.full(len(ids), -0.25)))
@@ -165,29 +153,6 @@ def test_model_json_roundtrip_preserves_batch_and_single_predictions(tmp_path):
         # for the same input shape, while these two evaluation paths need a
         # double-precision numerical comparison rather than bitwise identity.
         np.testing.assert_allclose(reloaded.predict(x[0]), expected[0], rtol=1e-14, atol=1e-15)
-        with pytest.raises(ValueError, match="finite"):
-            reloaded.predict(np.full(x.shape[1], np.nan))
-        with pytest.raises(ValueError, match="shape"):
-            reloaded.predict(np.zeros(x.shape[1] - 1))
-    finally:
-        env.close()
-
-
-@pytest.mark.parametrize("corruption", ["schema", "zero_scale", "nonfinite_weight", "wrong_width"])
-def test_invalid_model_artifacts_fail_before_runtime(corruption):
-    env = PreacherCurlEnv()
-    try:
-        artifact = _artifact(env)
-        if corruption == "schema":
-            artifact["schema"] = "unknown"
-        elif corruption == "zero_scale":
-            artifact["x_scale"][0] = 0
-        elif corruption == "nonfinite_weight":
-            artifact["w2"][0][0] = np.inf
-        else:
-            artifact["w1"].pop()
-        with pytest.raises(ValueError):
-            ErrorPredictor(artifact)
     finally:
         env.close()
 
@@ -264,44 +229,6 @@ def test_runtime_rejects_changed_dynamics_even_with_matching_config_and_features
             load_controller(str(checkpoint))
     finally:
         base.close()
-
-
-def test_finite_float64_predictions_cannot_overflow_policy_observations(tmp_path):
-    base = PreacherCurlEnv()
-    artifact = _artifact(base)
-    artifact["b2"] = [1e100, -1e100]
-    path = _write_artifact(tmp_path / "predictor.json", artifact)
-    wrapped = PredictorObservationWrapper(base, path)
-    try:
-        observation, _ = base.reset(seed=5)
-        assert np.isfinite(wrapped.predictor.predict(observation)).all()
-        with pytest.raises(FloatingPointError):
-            wrapped.observation(observation)
-    finally:
-        wrapped.close()
-
-
-@pytest.mark.parametrize("horizon", [0.0, 0.02, 0.05, np.nan, np.inf])
-def test_invalid_prediction_horizons_are_rejected(horizon):
-    with pytest.raises(ValueError):
-        horizon_steps(horizon, control_dt=0.02, motor_delay=0.04)
-
-
-def test_policy_loader_rejects_missing_or_mismatched_contract_before_loading_weights(tmp_path):
-    checkpoint = tmp_path / "policy.zip"
-    checkpoint.write_bytes(b"intentionally not a policy archive")
-    with pytest.raises(ValueError, match="sidecar"):
-        load_controller(str(checkpoint))
-    config = PreacherCurlConfig()
-    metadata = {
-        "schema_version": 1, "config": asdict(config),
-        "dynamics_sha256": dynamics_digest(), "predictor_sha256": None,
-    }
-    Path(str(checkpoint) + ".metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
-    changed = tmp_path / "changed.json"
-    changed.write_text(json.dumps({"payload_mass": 2.0}), encoding="utf-8")
-    with pytest.raises(ValueError, match="configuration differs"):
-        load_controller(str(checkpoint), config_path=changed)
 
 
 def test_policy_loader_rejects_predictor_hash_mismatch_before_loading_weights(tmp_path):

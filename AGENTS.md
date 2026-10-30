@@ -39,3 +39,16 @@ docs/roadmap.md before changing its scope. User instructions take precedence.
 - Keep tested versions explicit. Do not claim CPU/GPU backend equivalence or a
   functioning Unreal integration until the relevant checks have actually run.
 
+## Proportionate testing
+
+- This is a small hobby prototype, not a general-purpose public framework.
+  Keep a compact suite of behavioral checks for the invariants above and
+  regressions that have actually occurred. See tests/README.md for the scope.
+- Add a test for a concrete failure mode, not automatically for every function,
+  helper, branch, or rejected input. Reuse an existing scenario when appropriate.
+- Avoid exhaustive invalid-input matrices and fragile assertions about private
+  implementation details unless they protect a demonstrated, important failure.
+- Do not merge unrelated tests or hide parameter cases merely to lower the count.
+  Neither a test-count target nor a coverage percentage is a project goal.
+- Passing tests do not establish anatomical accuracy, natural movement, or a
+  usable GUI. Check relevant rendered poses and actual policy behavior as well.

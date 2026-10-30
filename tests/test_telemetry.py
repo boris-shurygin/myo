@@ -1,6 +1,5 @@
-"""Renderer-facing units, signal semantics, and serialization boundaries."""
+"""Renderer-facing units and separation of command, activation and force."""
 
-from copy import deepcopy
 import json
 
 import numpy as np
@@ -15,9 +14,13 @@ def test_packet_roundtrip_keeps_si_units_schema_and_actual_minus_target_error():
     env = PreacherCurlEnv()
     try:
         env.reset(seed=3, options={"q": 1.2, "qvel": 0.3})
+        before = (env.time, env.data.qpos.copy(), env.data.qvel.copy())
         packet = make_packet(env, sequence=4, episode=2, run_id="проверка")
         decoded = json.loads(encode_packet(packet))
         assert decoded == packet
+        assert env.time == before[0]
+        np.testing.assert_array_equal(env.data.qpos, before[1])
+        np.testing.assert_array_equal(env.data.qvel, before[2])
         assert packet["schema"] == "myo.character_state.v1"
         assert packet["config_sha256"] == config_digest(env.config)
         assert packet["dynamics_sha256"] == dynamics_digest()
@@ -69,54 +72,5 @@ def test_command_delay_and_activation_are_separate_render_signals():
             assert muscle["excitation_delayed"] == 0.0
             assert muscle["activation"] == 0.0
             assert muscle["remaining_capacity"] == 1.0
-    finally:
-        env.close()
-
-
-def test_emitting_multiple_snapshots_does_not_advance_physics():
-    env = PreacherCurlEnv()
-    try:
-        env.reset(seed=6)
-        env.step(env.baseline_action())
-        before_time, before_q, before_v = env.time, env.data.qpos.copy(), env.data.qvel.copy()
-        packets = [make_packet(env, index, 0, "read-only") for index in range(3)]
-        assert [packet["sequence"] for packet in packets] == [0, 1, 2]
-        assert all(packet["simulation_time_s"] == before_time for packet in packets)
-        assert env.time == before_time
-        np.testing.assert_array_equal(env.data.qpos, before_q)
-        np.testing.assert_array_equal(env.data.qvel, before_v)
-    finally:
-        env.close()
-
-
-@pytest.mark.parametrize("invalid", [np.nan, np.inf, -np.inf])
-def test_nonfinite_values_cannot_cross_json_boundary(invalid):
-    with pytest.raises(ValueError):
-        encode_packet({"muscles": [{"tendon_force_N": invalid}]})
-
-
-def test_packet_builder_rejects_nonfinite_simulation_snapshot(monkeypatch):
-    env = PreacherCurlEnv()
-    try:
-        env.reset(seed=7)
-        snapshot = deepcopy(env.telemetry())
-        snapshot["fiber_length_m"][0] = np.nan
-        monkeypatch.setattr(env, "telemetry", lambda: snapshot)
-        with pytest.raises(ValueError):
-            make_packet(env, 0, 0, "bad-state")
-    finally:
-        env.close()
-
-
-@pytest.mark.parametrize("sequence,episode,run_id", [
-    (-1, 0, "run"), (0, -1, "run"), (0, 0, ""),
-    (0.5, 0, "run"), (0, 0.5, "run"), (True, 0, "run"), (0, False, "run"),
-])
-def test_invalid_packet_identity_is_rejected(sequence, episode, run_id):
-    env = PreacherCurlEnv()
-    try:
-        env.reset(seed=8)
-        with pytest.raises(ValueError):
-            make_packet(env, sequence, episode, run_id)
     finally:
         env.close()
