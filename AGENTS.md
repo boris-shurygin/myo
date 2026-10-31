@@ -5,6 +5,7 @@ docs/roadmap.md before changing its scope. User instructions take precedence.
 For the agreed next arm demo, also read docs/first-stage.md. It distinguishes
 planned control/history/protection from the implemented V0; the visual milestones
 are in integrations/unreal/README.md. Do not report a plan as working code.
+Model sources and the laptop-first workflow are in docs/model-sources-and-workflow.md.
 
 ## Invariants
 
@@ -38,6 +39,22 @@ are in integrations/unreal/README.md. Do not report a plan as working code.
 - Preserve proportionate scope: an articulated 1-DOF arm can have detailed 3D
   visuals. UE is the presentation/input layer; Flesh is for tissue deformation,
   not a prerequisite for compliant tendons in headless physics.
+
+## Model sources and development machines
+
+- Use MyoArm from MyoSim for skeletal geometry, muscle paths and initial force
+  parameters; reuse its bone meshes for rendering. Preserve series elasticity
+  and delay when replacing native actuators; never apply both force paths.
+- Use official BodyParts3D for muscle surfaces, aligned to the MyoArm skeleton.
+  Do not substitute Z-Anatomy CC BY-SA assets into UE without suitable permission.
+  Record per-asset provenance and licensing before importing or publishing.
+  Meshes are not ready-made active Flesh assets; integration is still planned.
+- Work locally on the Ubuntu laptop first. Move to the Windows RTX 3060 desktop
+  when UE is needed or measured laptop performance becomes limiting. Do not add
+  remote-desktop/streaming infrastructure or require WSL by default.
+- Cloud GPU training is a later option after measuring a desktop bottleneck and
+  verifying backend equivalence. Do not provision paid resources without a new
+  explicit request. Keep training headless and portable between machines.
 
 ## Workflow
 
