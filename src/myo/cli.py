@@ -33,6 +33,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         command.add_argument("--predictor", type=Path)
         command.add_argument("--output", type=Path, help="Optional JSONL state snapshots; use runs/.")
         command.add_argument("--udp-port", type=int, help="Send snapshots to a receiver on 127.0.0.1.")
+        command.add_argument("--command-port", type=int, help="Receive episode-scoped angle/trigger commands on localhost.")
+        command.add_argument("--command-timeout", type=float, default=0.5,
+                             help="Wall-clock seconds without input before requesting relaxation.")
         command.add_argument("--viewer", action="store_true", default=name == "demo",
                              help="Open the compact arm viewer at real-time speed (requires a display).")
         command.add_argument("--realtime", action="store_true", default=name == "demo",
@@ -46,13 +49,34 @@ def main(argv: Sequence[str] | None = None) -> None:
     writer = None
     publisher = None
     viewer = None
+    receiver = None
     try:
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             writer = args.output.open("w", encoding="utf-8")
         if args.udp_port is not None:
             publisher = LoopbackPublisher(args.udp_port)
-        observation, _ = env.reset(seed=args.seed)
+        if args.command_port is not None:
+            from .control import LoopbackCommandReceiver
+            if base.config.task_mode == "reference":
+                raise ValueError("Command input needs an interactive/curriculum config.")
+            receiver = LoopbackCommandReceiver(args.command_port, args.command_timeout)
+        def reset_episode(seed):
+            # A saved curriculum remains part of the checkpoint contract, but
+            # its randomized training starts should not surprise a demo user.
+            # Choose the nominal load and fresh muscles only at explicit reset;
+            # the load then stays fixed and fatigue evolves normally.
+            options = ({"payload_mass": base.config.payload_mass, "capacity": 1.0}
+                       if args.command == "demo" else None)
+            result, _ = env.reset(seed=seed, options=options)
+            if (args.command == "demo" or receiver) and base.config.task_mode != "reference":
+                base.set_command(base.command.requested, base.command.trigger)
+                result = base.observe()
+                if hasattr(env, "predictor"):
+                    result = env.observation(result)
+            return result
+
+        observation = reset_episode(args.seed)
         if args.viewer:
             from .demo import DemoViewer
 
@@ -70,6 +94,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         start = time.perf_counter()
         next_frame = start
         completed_steps = 0
+        tracking_steps = 0
 
         def emit() -> None:
             nonlocal sequence
@@ -96,24 +121,48 @@ def main(argv: Sequence[str] | None = None) -> None:
                     break
                 if restart:
                     episode += 1
-                    observation, _ = env.reset(seed=args.seed)
+                    observation = reset_episode(args.seed)
+                    if getattr(viewer, "stop_reason", None):
+                        viewer.stop_reason = None
+                        viewer.paused = False
                     emit()
-                if viewer.paused:
+                if viewer.paused or getattr(viewer, "stop_reason", None):
                     viewer.draw()
                     time.sleep(base.control_dt)
                     next_frame = time.perf_counter()
                     continue
+            if receiver:
+                receiver.poll(base, run_id, episode)
+            if viewer or receiver:
+                observation = base.observe()
+                if hasattr(env, "predictor"):
+                    observation = env.observation(observation)
             before = time.perf_counter()
+            score_trigger = base.command.trigger if base.config.task_mode != "reference" else 1.0
             control = action(observation)
             after_policy = time.perf_counter()
             observation, reward, terminated, truncated, info = env.step(control)
             after_step = time.perf_counter()
             policy_times.append(1000 * (after_policy - before))
             step_times.append(1000 * (after_step - after_policy))
-            error_square_sum += np.square(info["tracking_error"])
+            if score_trigger > 0:
+                error_square_sum += np.square(info["tracking_error"])
+                tracking_steps += 1
             reward_sum += reward
             completed_steps += 1
             emit()
+            if terminated:
+                failures += 1
+                if viewer:
+                    viewer.stop_reason = info.get("termination_reason") or "physical_failure"
+                    viewer.paused = True
+            elif truncated and viewer:
+                # episode_seconds is a training/evaluation horizon, not a
+                # reason to reset an interactive arm. The environment owns
+                # this done latch, so reopen it only after time truncation;
+                # keep the clock, muscles, delay queues, history and the
+                # saved policy configuration exactly as they are.
+                base._episode_done = False
             if viewer:
                 before_viewer = time.perf_counter()
                 viewer.draw()
@@ -125,20 +174,21 @@ def main(argv: Sequence[str] | None = None) -> None:
                     time.sleep(remaining)
                 else:
                     next_frame = time.perf_counter()
-            if terminated or truncated:
-                failures += int(terminated)
+            if (terminated or truncated) and not viewer:
                 if count is None or completed_steps < count:
                     episode += 1
-                    observation, _ = env.reset(seed=args.seed + episode)
+                    observation = reset_episode(args.seed + episode)
                     emit()
         wall = time.perf_counter() - start
-        error_rmse = np.sqrt(error_square_sum / completed_steps) if completed_steps else None
+        error_rmse = np.sqrt(error_square_sum / tracking_steps) if tracking_steps else None
         summary = {
             "controller": args.controller,
             "simulated_seconds": completed_steps * base.control_dt,
             "wall_seconds": wall,
             "episodes": episode + 1,
             "physical_failures": failures,
+            "tracking_samples": tracking_steps,
+            "tracking_scope": "trigger > 0 only; release has no target-angle objective",
             "angle_rmse_deg": float(np.rad2deg(error_rmse[0])) if error_rmse is not None else None,
             "angular_velocity_rmse_rad_s": float(error_rmse[1]) if error_rmse is not None else None,
             "mean_reward": reward_sum / completed_steps if completed_steps else None,
@@ -149,7 +199,9 @@ def main(argv: Sequence[str] | None = None) -> None:
             "viewer_mean_ms": float(np.mean(viewer_times)) if viewer_times else None,
             "timing_sample_steps": len(step_times),
             "timing_scope": "env.step includes predictor wrapper; viewer time is separate; excludes packet writing/pacing; demo retains last 5000 timing samples",
-            "limitation": "Toy model. Headless timing is not an Unreal or full-body FPS benchmark.",
+            "geometry": base.config.geometry,
+            "task_mode": base.config.task_mode,
+            "limitation": "Experimental 1-DOF model. Headless timing is not a viewer or Unreal benchmark.",
         }
         print(json.dumps(summary, ensure_ascii=False, indent=2, allow_nan=False))
     finally:
@@ -159,6 +211,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             writer.close()
         if publisher:
             publisher.close()
+        if receiver:
+            receiver.close()
         env.close()
 
 

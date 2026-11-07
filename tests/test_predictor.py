@@ -218,7 +218,7 @@ def test_runtime_rejects_changed_dynamics_even_with_matching_config_and_features
         checkpoint = tmp_path / "policy.zip"
         checkpoint.write_bytes(b"must reject fingerprint before loading weights")
         metadata = {
-            "schema_version": 1,
+            "schema_version": 2,
             "config": asdict(base.config),
             "observation_names": list(base.observation_names),
             "dynamics_sha256": "0" * 64,
@@ -237,7 +237,7 @@ def test_policy_loader_rejects_predictor_hash_mismatch_before_loading_weights(tm
     predictor = tmp_path / "predictor.json"
     predictor.write_text("{}", encoding="utf-8")
     metadata = {
-        "schema_version": 1,
+        "schema_version": 2,
         "config": asdict(PreacherCurlConfig()),
         "dynamics_sha256": dynamics_digest(),
         "predictor_sha256": "0" * 64,
@@ -265,12 +265,15 @@ def test_optional_ppo_predictor_bundle_survives_relocation(tmp_path):
     output = source / "policy.zip"
     train_main([
         "--steps", "1", "--seed", "8", "--threads", "1",
+        "--warm-start-steps", "30", "--log-std-init", "-2",
         "--config", str(config_path), "--predictor", str(original_predictor),
         "--output", str(output),
     ])
     sidecar = Path(str(output) + ".metadata.json")
     metadata = json.loads(sidecar.read_text(encoding="utf-8"))
     assert metadata["dynamics_sha256"] == dynamics_digest()
+    assert metadata["warm_start"]["train_episodes"] == 3
+    assert metadata["warm_start"]["validation_episodes"] == 2
     assert not Path(metadata["predictor_path"]).is_absolute()
     bundled = source / metadata["predictor_path"]
     assert bundled.read_bytes() == original_bytes
@@ -291,3 +294,87 @@ def test_optional_ppo_predictor_bundle_survives_relocation(tmp_path):
         assert np.isfinite(next_observation).all() and np.isfinite(reward)
     finally:
         env.close()
+
+    # A sidecar from another equal-shaped policy must not authenticate weights.
+    relocated_checkpoint = relocated / output.name
+    relocated_checkpoint.write_bytes(relocated_checkpoint.read_bytes() + b"changed")
+    with pytest.raises(ValueError, match="checkpoint contents"):
+        load_controller(str(relocated_checkpoint))
+
+
+def test_normalized_actor_preserves_actions_after_relocation_and_guards_features(tmp_path, monkeypatch):
+    sb3 = pytest.importorskip("stable_baselines3")
+    import myo.policy_features as features
+    from myo.runtime import policy_contract
+
+    base = PreacherCurlEnv(PreacherCurlConfig(task_mode="interactive"))
+    try:
+        model = sb3.PPO("MlpPolicy", base, seed=18, device="cpu", n_steps=8,
+                        batch_size=8, policy_kwargs={
+                            "features_extractor_class": features.NormalizedFeaturesExtractor,
+                            "net_arch": [16, 16],
+                        })
+        width = base.observation_space.shape[0]
+        model.policy.features_extractor.set_normalization(
+            np.linspace(-0.3, 0.3, width), np.linspace(0.0, 0.5, width))
+        observations = [base.reset(seed=18)[0]]
+        observations.append(base.step(base.baseline_action())[0])
+        expected = [model.predict(obs, deterministic=True)[0] for obs in observations]
+        source = tmp_path / "source.zip"
+        model.save(source)
+        destination = tmp_path / "relocated" / "policy.zip"
+        destination.parent.mkdir()
+        source.replace(destination)
+        metadata = {
+            "schema_version": 2,
+            "config": asdict(base.config),
+            "dynamics_sha256": dynamics_digest(),
+            "contract": policy_contract(base),
+            "checkpoint_sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
+            "features_sha256": hashlib.sha256(Path(features.__file__).read_bytes()).hexdigest(),
+            "observation_names": list(base.observation_names),
+            "predictor_sha256": None,
+        }
+    finally:
+        base.close()
+    sidecar = Path(str(destination) + ".metadata.json")
+    sidecar.write_text(json.dumps(metadata), encoding="utf-8")
+    restored, act, _ = load_controller(str(destination))
+    try:
+        for observation, expected_action in zip(observations, expected):
+            np.testing.assert_allclose(act(observation), expected_action, atol=1e-7)
+    finally:
+        restored.close()
+    # Refinement must load the saved actor and frozen normalization, rather than
+    # silently starting a fresh model or fitting statistics on a second dataset.
+    import myo.imitation as imitation
+    from myo.train import main as train_main
+
+    def check_resume(resumed_model, env, steps, rounds, seed, epochs, *, resume, curriculum,
+                     vertical_teacher_noise, inactive_flexor_margin, weak_trigger_weight):
+        assert resume
+        for observation, expected_action in zip(observations, expected):
+            np.testing.assert_allclose(resumed_model.predict(observation, deterministic=True)[0],
+                                       expected_action, atol=1e-7)
+        return {"checked_saved_actor": True}
+
+    monkeypatch.setattr(imitation, "train_command_actor", check_resume)
+    refined = tmp_path / "refined.zip"
+    arguments = ["--steps", "0", "--command-imitation", "--warm-start-steps", "1000",
+                 "--imitation-rounds", "1", "--resume-imitation", str(destination),
+                 "--output", str(refined)]
+    train_main(arguments)
+    refined_metadata = json.loads(Path(str(refined) + ".metadata.json").read_text())
+    assert refined_metadata["parent_checkpoint_sha256"] == metadata["checkpoint_sha256"]
+    restored, act, _ = load_controller(str(refined))
+    try:
+        for observation, expected_action in zip(observations, expected):
+            np.testing.assert_allclose(act(observation), expected_action, atol=1e-7)
+    finally:
+        restored.close()
+    metadata["features_sha256"] = "0" * 64
+    sidecar.write_text(json.dumps(metadata), encoding="utf-8")
+    with pytest.raises(ValueError, match="feature preprocessing"):
+        load_controller(str(destination))
+    with pytest.raises(ValueError, match="feature preprocessing"):
+        train_main(arguments)

@@ -32,10 +32,22 @@ def dynamics_digest() -> str:
     root = Path(__file__).parent
     digest = hashlib.sha256()
     digest.update(f"mujoco={version('mujoco')}\n".encode())
-    for name in ("env.py", "muscle.py", "delay.py", "assets/preacher_curl.xml"):
+    for name in ("env.py", "commands.py", "geometry.py", "muscle.py", "fatigue.py", "delay.py", "assets/preacher_curl.xml"):
         digest.update(name.encode())
         digest.update((root / name).read_bytes())
     return digest.hexdigest()
+
+
+def policy_contract(env: PreacherCurlEnv) -> dict:
+    return {
+        "action_mapping": list(env.muscle_names),
+        "action_semantics": "excitation_0_1_before_motor_delay; trigger_is_not_output_multiplier",
+        "physics_dt_s": env.config.physics_dt,
+        "control_dt_s": env.control_dt,
+        "history_steps": env.config.history_steps if env.config.task_mode != "reference" else 0,
+        "history_initialization": "repeat_reset_sensor_command_and_initial_excitation",
+        "geometry_sha256": env.geometry.fingerprint if env.geometry else "toy_v0_in_dynamics_digest",
+    }
 
 
 def load_controller(
@@ -59,10 +71,14 @@ def load_controller(
         if not checkpoint.is_file() or not sidecar.is_file():
             raise ValueError("A PPO .zip checkpoint and its .zip.metadata.json sidecar are required.")
         metadata = json.loads(sidecar.read_text(encoding="utf-8"))
-        if metadata.get("schema_version") != 1:
+        if metadata.get("schema_version") != 2:
             raise ValueError("Unsupported policy metadata version.")
         if metadata.get("dynamics_sha256") != dynamics_digest():
             raise ValueError("Policy dynamics source/model fingerprint does not match this installation.")
+        if metadata.get("features_sha256") is not None:
+            features = Path(__file__).with_name("policy_features.py")
+            if hashlib.sha256(features.read_bytes()).hexdigest() != metadata["features_sha256"]:
+                raise ValueError("Policy feature preprocessing differs from its saved implementation.")
         config = PreacherCurlConfig(**metadata["config"])
         if config_path and asdict(read_config(config_path)) != asdict(config):
             raise ValueError("Runtime configuration differs from the policy's saved configuration.")
@@ -84,6 +100,10 @@ def load_controller(
 
             env = PredictorObservationWrapper(env, predictor_path)
         if checkpoint:
+            if metadata.get("contract") != policy_contract(env.unwrapped):
+                raise ValueError("Runtime action/timing/geometry contract differs from the checkpoint.")
+            if metadata.get("checkpoint_sha256") != hashlib.sha256(checkpoint.read_bytes()).hexdigest():
+                raise ValueError("Policy checkpoint contents differ from its metadata.")
             if metadata["observation_names"] != list(env.observation_names):
                 raise ValueError("Runtime observation order differs from the policy's saved contract.")
             try:

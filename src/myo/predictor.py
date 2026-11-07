@@ -128,6 +128,8 @@ class PredictorObservationWrapper(gym.ObservationWrapper):
             raise ValueError("Predictor was collected with a different environment configuration.")
         if self.predictor.artifact.get("dynamics_sha256") != dynamics_digest():
             raise ValueError("Predictor dynamics source/model fingerprint does not match this installation.")
+        if base.geometry and self.predictor.artifact.get("geometry_sha256") != base.geometry.fingerprint:
+            raise ValueError("Predictor geometry fingerprint does not match the prepared MyoArm assets.")
         horizon_steps(self.predictor.horizon_s, base.control_dt, base.config.motor_delay)
         self.observation_names = list(base.observation_names) + OUTPUT_NAMES
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(len(self.observation_names),), dtype=np.float32)
@@ -198,6 +200,7 @@ def fit_predictor(
         "horizon_s": metadata["horizon_s"],
         "config_sha256": metadata["config_sha256"],
         "dynamics_sha256": metadata["dynamics_sha256"],
+        "geometry_sha256": metadata.get("geometry_sha256"),
         "config": metadata["config"],
         "behavior_controller": metadata["behavior_controller"],
         "seed": seed,
@@ -260,6 +263,7 @@ def collect_data(args) -> None:
             "config": asdict(base.config),
             "config_sha256": config_digest(base.config),
             "dynamics_sha256": dynamics_digest(),
+            "geometry_sha256": base.geometry.fingerprint if base.geometry else None,
             "behavior_controller": args.controller,
             "behavior_policy_metadata": provenance,
             "seed": args.seed,

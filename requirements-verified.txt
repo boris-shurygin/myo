@@ -1,4 +1,4 @@
-# Verified on Linux / Python 3.12.14, 2026-10-29. Includes optional training dependencies.
+# Verified on Linux / Python 3.12.16, 2026-11-01. Includes optional training dependencies.
 # Install this file only to reproduce that complete environment; base use needs pyproject.toml.
 --extra-index-url https://download.pytorch.org/whl/cpu
 absl-py==2.5.1
@@ -21,7 +21,7 @@ pluggy==1.7.0
 pygments==2.21.0
 pyopengl==3.1.10
 pytest==9.2.0
-setuptools==84.2.1
+setuptools==78.1.0
 stable_baselines3==2.9.2
 sympy==1.14.0
 torch==2.15.0+cpu

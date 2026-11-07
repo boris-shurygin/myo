@@ -2,9 +2,10 @@
 
 This repository is an experimental character-control project. Read README.md and
 docs/roadmap.md before changing its scope. User instructions take precedence.
-For the agreed next arm demo, also read docs/first-stage.md. It distinguishes
-planned control/history/protection from the implemented V0; the visual milestones
-are in integrations/unreal/README.md. Do not report a plan as working code.
+For the agreed arm demo, also read docs/first-stage.md. It distinguishes the
+implemented Linux stage (MyoArm, commands, history, training/evaluation and
+diagnostic viewer) from unproven policy behavior and the planned UE tissue
+visualization in integrations/unreal/README.md. Do not report a plan as working code.
 Model sources and the laptop-first workflow are in docs/model-sources-and-workflow.md.
 
 ## Invariants
@@ -39,12 +40,19 @@ Model sources and the laptop-first workflow are in docs/model-sources-and-workfl
 - Preserve proportionate scope: an articulated 1-DOF arm can have detailed 3D
   visuals. UE is the presentation/input layer; Flesh is for tissue deformation,
   not a prerequisite for compliant tendons in headless physics.
+- Full D1 requires selectable bone, muscle and skin views. Skin deformation must
+  respond to underlying muscle tension/deformation, including different muscle
+  states at the same bone pose. A simplified subcutaneous layer is sufficient;
+  a full anatomical fat model is not required. These surfaces and their Flesh
+  setup remain future UE work; color-changing paths are not tissue deformation.
 
 ## Model sources and development machines
 
 - Use MyoArm from MyoSim for skeletal geometry, muscle paths and initial force
   parameters; reuse its bone meshes for rendering. Preserve series elasticity
   and delay when replacing native actuators; never apply both force paths.
+  The pinned importer and six-muscle Linux model are implemented; see
+  docs/myoarm.md. Keep downloaded source/derived assets in ignored data/.
 - Use official BodyParts3D for muscle surfaces, aligned to the MyoArm skeleton.
   Do not substitute Z-Anatomy CC BY-SA assets into UE without suitable permission.
   Record per-asset provenance and licensing before importing or publishing.
@@ -66,10 +74,16 @@ Model sources and the laptop-first workflow are in docs/model-sources-and-workfl
   dynamics, timing, observations, reward or serialization.
 - Report actual validation commands and results in docs/validation.md. A short
   training smoke test demonstrates plumbing, not a successful motor policy.
+- Use the current v2 telemetry and checkpoint contracts. V0 training results and
+  v1 snapshots are historical; do not silently reuse them with the changed
+  muscle law, MyoArm geometry or command/history observations.
 - Preserve SI units internally. Convert coordinates/units at a named renderer
   boundary, not in the muscle or controller implementation.
 - Do not commit generated rollouts, weights, access tokens, third-party motion
   datasets or anatomical assets. Check their individual licenses first.
+  Owner-approved exception: `runs/d1_actor_calibrated_transitions.zip` and its
+  `.zip.metadata.json` are tracked together as the tested demo controller.
+  Other generated checkpoints and training data remain ignored.
 - Do not assign a project license without an explicit owner decision.
 - Keep tested versions explicit. Do not claim CPU/GPU backend equivalence or a
   functioning Unreal integration until the relevant checks have actually run.

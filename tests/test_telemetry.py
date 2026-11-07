@@ -21,7 +21,7 @@ def test_packet_roundtrip_keeps_si_units_schema_and_actual_minus_target_error():
         assert env.time == before[0]
         np.testing.assert_array_equal(env.data.qpos, before[1])
         np.testing.assert_array_equal(env.data.qvel, before[2])
-        assert packet["schema"] == "myo.character_state.v1"
+        assert packet["schema"] == "myo.character_state.v2"
         assert packet["config_sha256"] == config_digest(env.config)
         assert packet["dynamics_sha256"] == dynamics_digest()
         assert packet["coordinates"] == {
@@ -74,3 +74,36 @@ def test_command_delay_and_activation_are_separate_render_signals():
             assert muscle["remaining_capacity"] == 1.0
     finally:
         env.close()
+
+
+def test_command_receiver_ignores_old_episode_and_timeout_only_requests_relaxation():
+    import socket
+    from myo.control import LoopbackCommandReceiver
+    env = PreacherCurlEnv(PreacherCurlConfig(task_mode='interactive', initial_activation=0.4))
+    receiver = LoopbackCommandReceiver(0, timeout=0.5)
+    sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        env.reset(seed=2)
+        def send(sequence, episode, trigger):
+            sender.sendto(json.dumps({'schema': 'myo.character_command.v1', 'run_id': 'test',
+                                     'episode': episode, 'sequence': sequence,
+                                     'target_angle_rad': 1.6, 'trigger': trigger}).encode(),
+                          receiver.socket.getsockname())
+        send(2, 0, 0.7)
+        assert receiver.poll(env, 'test', 0, now=1.0)
+        send(1, 0, 0.9)
+        send(99, 1, 1.0)
+        assert not receiver.poll(env, 'test', 0, now=1.2)
+        assert env.command.trigger == 0.7
+        before = env.observe().copy()
+        assert receiver.poll(env, 'test', 0, now=1.6)
+        assert env.command.trigger == 0.0 and receiver.timed_out
+        assert env.time == 0
+        assert [m.activation for m in env.muscles] == [0.4] * 4
+        assert all(np.all(m.delay.pending == 0.4) for m in env.muscles)
+        # Only the current command changes; no history or sensor is fabricated.
+        after = env.observe()
+        differing = np.flatnonzero(before != after)
+        assert [env.observation_names[i] for i in differing] == ['trigger']
+    finally:
+        sender.close(); receiver.close(); env.close()

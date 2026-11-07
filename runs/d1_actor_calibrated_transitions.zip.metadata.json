@@ -1,0 +1,5305 @@
+{
+  "schema_version": 2,
+  "task": "curriculum_preacher_curl",
+  "algorithm": "stable_baselines3.PPO",
+  "training_stage": "imitation_only",
+  "seed": 67,
+  "torch_threads": 1,
+  "requested_training_steps": 0,
+  "trained_steps": 0,
+  "warm_start": {
+    "method": "causal_dataset_aggregation",
+    "teacher": "diagnostic_heuristic",
+    "demonstration_steps": 44000,
+    "seed": 10067,
+    "rounds": [
+      {
+        "round": 1,
+        "teacher_probability": 1.0,
+        "training_transitions": 22000,
+        "training_episodes": 34,
+        "validation_excitation_rmse": 0.0019736732939684425,
+        "collection_episode_stops": {
+          "physical_failures": 0,
+          "left_training_angle_coverage": 0,
+          "warmup_control_steps": 3600,
+          "warmup_control_dt_s": 0.02,
+          "warmup_failed_episodes": 0,
+          "family_transitions": {
+            "0": 1200,
+            "1": 1000,
+            "2": 600,
+            "3": 600,
+            "4": 600,
+            "5": 600,
+            "6": 600,
+            "7": 600,
+            "8": 600,
+            "9": 600,
+            "10": 600,
+            "11": 1500,
+            "12": 1500,
+            "13": 600,
+            "14": 600,
+            "15": 600,
+            "16": 600,
+            "17": 600,
+            "18": 600,
+            "19": 600,
+            "20": 600,
+            "21": 600,
+            "22": 600,
+            "23": 600,
+            "24": 600,
+            "25": 600,
+            "26": 600,
+            "27": 600,
+            "28": 600,
+            "29": 600,
+            "30": 600,
+            "31": 600
+          }
+        },
+        "all_zero_label_fraction": 0.2540000081062317,
+        "closed_loop_validation": [
+          {
+            "epoch": 40,
+            "score": 15149.043553882208,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 236.46038672824437,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 81.31659796122487,
+                "tail_mean_excitation": 0.06412363797426224,
+                "waypoint_errors_deg": {},
+                "penalty": 2081.316597961225
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 15.150032707031382,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.141212427556103,
+                "tail_mean_excitation": 0.03007667325437069,
+                "waypoint_errors_deg": {},
+                "penalty": 0.141212427556103
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.91685990956589,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.8279687901479,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.1424747805346844,
+                "tail_mean_excitation": 0.0602673701941967,
+                "waypoint_errors_deg": {},
+                "penalty": 0.1424747805346844
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 104.41261598272878,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.39672362059719657,
+                "tail_mean_excitation": 0.044909145683050156,
+                "waypoint_errors_deg": {},
+                "penalty": 0.07934472411943932
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 125.60736129661272,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.6217313173016276,
+                "tail_mean_excitation": 0.051603805273771286,
+                "waypoint_errors_deg": {},
+                "penalty": 0.6217313173016276
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072815285,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 153.24306484953348,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 5.918989361024875,
+                "tail_mean_excitation": 0.046000488102436066,
+                "waypoint_errors_deg": {},
+                "penalty": 3005.918989361025
+              },
+              {
+                "scenario": "lower75_to45",
+                "final_angle_deg": 18.75558339963015,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 26.254415159676647,
+                "tail_mean_excitation": 0.04354419931769371,
+                "waypoint_errors_deg": {},
+                "penalty": 5026.254415159677
+              },
+              {
+                "scenario": "lower105_to45",
+                "final_angle_deg": 18.723908278911154,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 25.949304362859063,
+                "tail_mean_excitation": 0.04708271846175194,
+                "waypoint_errors_deg": {},
+                "penalty": 5025.949304362859
+              },
+              {
+                "scenario": "vertical_return",
+                "final_angle_deg": 56.982336323800844,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.770858315474095,
+                "tail_mean_excitation": 0.05936408415436745,
+                "waypoint_errors_deg": {
+                  "155": 4.900950464680856,
+                  "145": 0.9476750077557862
+                },
+                "penalty": 8.619483787910736
+              },
+              {
+                "scenario": "rest_recovered125",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_recovered155",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              }
+            ]
+          },
+          {
+            "epoch": 80,
+            "score": 5097.761499303558,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 237.03954685418202,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 81.98495512763219,
+                "tail_mean_excitation": 0.06413760036230087,
+                "waypoint_errors_deg": {},
+                "penalty": 2081.984955127632
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 17.987876061664032,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.989425300227192,
+                "tail_mean_excitation": 0.020526336506009102,
+                "waypoint_errors_deg": {},
+                "penalty": 2.989425300227192
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909656942,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 75.24156785770808,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.2682076114798858,
+                "tail_mean_excitation": 0.0598190613090992,
+                "waypoint_errors_deg": {},
+                "penalty": 0.2682076114798858
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 105.58092270503779,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.7908374237284962,
+                "tail_mean_excitation": 0.044883690774440765,
+                "waypoint_errors_deg": {},
+                "penalty": 0.15816748474569925
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 125.34670437233828,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.35863033061171196,
+                "tail_mean_excitation": 0.05175171047449112,
+                "waypoint_errors_deg": {},
+                "penalty": 0.35863033061171196
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.16744007286198,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 154.2350510806069,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 5.5255792283774685,
+                "tail_mean_excitation": 0.05202706530690193,
+                "waypoint_errors_deg": {},
+                "penalty": 3005.5255792283774
+              },
+              {
+                "scenario": "lower75_to45",
+                "final_angle_deg": 44.48727341926227,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.3575209046209074,
+                "tail_mean_excitation": 0.06566917151212692,
+                "waypoint_errors_deg": {},
+                "penalty": 1.3575209046209074
+              },
+              {
+                "scenario": "lower105_to45",
+                "final_angle_deg": 43.250668325337934,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.33599393507257,
+                "tail_mean_excitation": 0.06683884561061859,
+                "waypoint_errors_deg": {},
+                "penalty": 2.33599393507257
+              },
+              {
+                "scenario": "vertical_return",
+                "final_angle_deg": 61.496353814975116,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.5128301721751327,
+                "tail_mean_excitation": 0.05573200806975365,
+                "waypoint_errors_deg": {
+                  "155": 0.7555051040693286,
+                  "145": 0.5146841045448411
+                },
+                "penalty": 2.7830193807893027
+              },
+              {
+                "scenario": "rest_recovered125",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_recovered155",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              }
+            ]
+          },
+          {
+            "epoch": 120,
+            "score": 5099.264042733684,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 236.8306532833403,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 81.79092382054814,
+                "tail_mean_excitation": 0.06434185057878494,
+                "waypoint_errors_deg": {},
+                "penalty": 2081.790923820548
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 18.003568534903632,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 3.0060278343131976,
+                "tail_mean_excitation": 0.020975088700652122,
+                "waypoint_errors_deg": {},
+                "penalty": 3.0060278343131976
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.91685990951522,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 75.348184400855,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.36902947454073176,
+                "tail_mean_excitation": 0.059710610657930374,
+                "waypoint_errors_deg": {},
+                "penalty": 0.36902947454073176
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 105.64972846173335,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.8701210068735867,
+                "tail_mean_excitation": 0.04492348060011864,
+                "waypoint_errors_deg": {},
+                "penalty": 0.17402420137471736
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 125.60896929048667,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.616825463111787,
+                "tail_mean_excitation": 0.05160747095942497,
+                "waypoint_errors_deg": {},
+                "penalty": 0.616825463111787
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072828168,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 152.34550258701896,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 5.112471483660257,
+                "tail_mean_excitation": 0.052987273782491684,
+                "waypoint_errors_deg": {},
+                "penalty": 3005.11247148366
+              },
+              {
+                "scenario": "lower75_to45",
+                "final_angle_deg": 43.56687962346879,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.302434738339806,
+                "tail_mean_excitation": 0.06556744873523712,
+                "waypoint_errors_deg": {},
+                "penalty": 1.302434738339806
+              },
+              {
+                "scenario": "lower105_to45",
+                "final_angle_deg": 42.71981738768181,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.3458930694459075,
+                "tail_mean_excitation": 0.06658654659986496,
+                "waypoint_errors_deg": {},
+                "penalty": 2.3458930694459075
+              },
+              {
+                "scenario": "vertical_return",
+                "final_angle_deg": 61.85469353196915,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.8611820233238625,
+                "tail_mean_excitation": 0.05554518476128578,
+                "waypoint_errors_deg": {
+                  "155": 2.2908012075248885,
+                  "145": 0.3944294175002483
+                },
+                "penalty": 4.5464126483489995
+              },
+              {
+                "scenario": "rest_recovered125",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_recovered155",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              }
+            ]
+          },
+          {
+            "epoch": 110,
+            "score": 5101.46409131158,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 236.79011680188864,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 81.74817104912727,
+                "tail_mean_excitation": 0.06430626660585403,
+                "waypoint_errors_deg": {},
+                "penalty": 2081.7481710491274
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 17.996428400295198,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.998432843394263,
+                "tail_mean_excitation": 0.02077070251107216,
+                "waypoint_errors_deg": {},
+                "penalty": 2.998432843394263
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.91685990959749,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 75.53449254758304,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.537962022272557,
+                "tail_mean_excitation": 0.05940726771950722,
+                "waypoint_errors_deg": {},
+                "penalty": 0.537962022272557
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 105.43668518366657,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.6533005985562521,
+                "tail_mean_excitation": 0.04488380253314972,
+                "waypoint_errors_deg": {},
+                "penalty": 0.13066011971125044
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 125.63726333761525,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.64532814308176,
+                "tail_mean_excitation": 0.05159120261669159,
+                "waypoint_errors_deg": {},
+                "penalty": 0.64532814308176
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.16744007277888,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 153.8070943618665,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 5.1366118034368355,
+                "tail_mean_excitation": 0.05223577842116356,
+                "waypoint_errors_deg": {},
+                "penalty": 3005.1366118034366
+              },
+              {
+                "scenario": "lower75_to45",
+                "final_angle_deg": 43.27236171717223,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.3037944964001467,
+                "tail_mean_excitation": 0.06630034744739532,
+                "waypoint_errors_deg": {},
+                "penalty": 2.3037944964001467
+              },
+              {
+                "scenario": "lower105_to45",
+                "final_angle_deg": 41.31078710092226,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 3.962764810140667,
+                "tail_mean_excitation": 0.0681266188621521,
+                "waypoint_errors_deg": {},
+                "penalty": 3.962764810140667
+              },
+              {
+                "scenario": "vertical_return",
+                "final_angle_deg": 61.93972370907179,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.9465586408115436,
+                "tail_mean_excitation": 0.055485859513282776,
+                "waypoint_errors_deg": {
+                  "155": 1.1118921676641946,
+                  "145": 0.941915215539486
+                },
+                "penalty": 4.000366024015224
+              },
+              {
+                "scenario": "rest_recovered125",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_recovered155",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              }
+            ]
+          }
+        ],
+        "selected_epoch": 80,
+        "selected_from_round": 1,
+        "selected_closed_loop_score": 5097.761499303558,
+        "retained_previous_round": false
+      },
+      {
+        "round": 2,
+        "teacher_probability": 0.0,
+        "training_transitions": 44000,
+        "training_episodes": 70,
+        "validation_excitation_rmse": 0.00224540465995311,
+        "collection_episode_stops": {
+          "physical_failures": 0,
+          "left_training_angle_coverage": 2,
+          "warmup_control_steps": 3600,
+          "warmup_control_dt_s": 0.02,
+          "warmup_failed_episodes": 0,
+          "family_transitions": {
+            "0": 1200,
+            "1": 1200,
+            "2": 1200,
+            "3": 845,
+            "4": 600,
+            "5": 600,
+            "6": 600,
+            "7": 600,
+            "8": 600,
+            "9": 600,
+            "10": 600,
+            "11": 1500,
+            "12": 1500,
+            "13": 600,
+            "14": 600,
+            "15": 600,
+            "16": 600,
+            "17": 28,
+            "18": 600,
+            "19": 127,
+            "20": 600,
+            "21": 600,
+            "22": 600,
+            "23": 600,
+            "24": 600,
+            "25": 600,
+            "26": 600,
+            "27": 600,
+            "28": 600,
+            "29": 600,
+            "30": 600,
+            "31": 600
+          }
+        },
+        "all_zero_label_fraction": 0.2540000081062317,
+        "closed_loop_validation": [
+          {
+            "epoch": 40,
+            "score": 5005.923601907096,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 155.29515494302188,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 0.41401568904548436,
+                "tail_mean_excitation": 0.07210943847894669,
+                "waypoint_errors_deg": {},
+                "penalty": 0.41401568904548436
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 14.861755015139135,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.14313807210948856,
+                "tail_mean_excitation": 0.3581351041793823,
+                "waypoint_errors_deg": {},
+                "penalty": 5000.14313807211
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859910025202,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 73.56382967325264,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.4203653231388569,
+                "tail_mean_excitation": 0.060685914009809494,
+                "waypoint_errors_deg": {},
+                "penalty": 1.4203653231388569
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 102.66965291299888,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.188166409192324,
+                "tail_mean_excitation": 0.04590175300836563,
+                "waypoint_errors_deg": {},
+                "penalty": 0.4376332818384648
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 124.94696228040769,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.05162690165895747,
+                "tail_mean_excitation": 0.05217035859823227,
+                "waypoint_errors_deg": {},
+                "penalty": 0.05162690165895747
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072864782,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 155.5890659543288,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.47872494012547157,
+                "tail_mean_excitation": 0.07052955031394958,
+                "waypoint_errors_deg": {},
+                "penalty": 0.47872494012547157
+              },
+              {
+                "scenario": "lower75_to45",
+                "final_angle_deg": 44.81699797481494,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.10474518686314781,
+                "tail_mean_excitation": 0.06519311666488647,
+                "waypoint_errors_deg": {},
+                "penalty": 0.10474518686314781
+              },
+              {
+                "scenario": "lower105_to45",
+                "final_angle_deg": 44.69702882615323,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.25129236545255107,
+                "tail_mean_excitation": 0.06550289690494537,
+                "waypoint_errors_deg": {},
+                "penalty": 0.25129236545255107
+              },
+              {
+                "scenario": "vertical_return",
+                "final_angle_deg": 61.31310997632595,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.3326881011225642,
+                "tail_mean_excitation": 0.055821243673563004,
+                "waypoint_errors_deg": {
+                  "155": 0.6060241426854702,
+                  "145": 0.6833479030562918
+                },
+                "penalty": 2.6220601468643263
+              },
+              {
+                "scenario": "rest_recovered125",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_recovered155",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              }
+            ]
+          },
+          {
+            "epoch": 80,
+            "score": 3.0061636853021816,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 154.94606724289264,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 0.05961935207469995,
+                "tail_mean_excitation": 0.06153281778097153,
+                "waypoint_errors_deg": {},
+                "penalty": 0.05961935207469995
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 15.102272568493845,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.10090348353846265,
+                "tail_mean_excitation": 0.030740389600396156,
+                "waypoint_errors_deg": {},
+                "penalty": 0.10090348353846265
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.91685990958705,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.50967526340219,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.4989367898748177,
+                "tail_mean_excitation": 0.060064077377319336,
+                "waypoint_errors_deg": {},
+                "penalty": 0.4989367898748177
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 104.44603863461106,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.417299438083166,
+                "tail_mean_excitation": 0.04491949453949928,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0834598876166332
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 126.07799393581779,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.0730490300341393,
+                "tail_mean_excitation": 0.05134589970111847,
+                "waypoint_errors_deg": {},
+                "penalty": 1.0730490300341393
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440073230246,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 155.0666007685877,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.13312886339013455,
+                "tail_mean_excitation": 0.06338382512331009,
+                "waypoint_errors_deg": {},
+                "penalty": 0.13312886339013455
+              },
+              {
+                "scenario": "lower75_to45",
+                "final_angle_deg": 44.61071213566445,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.3694437592590513,
+                "tail_mean_excitation": 0.06538989394903183,
+                "waypoint_errors_deg": {},
+                "penalty": 0.3694437592590513
+              },
+              {
+                "scenario": "lower105_to45",
+                "final_angle_deg": 44.55392328718403,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.42743298830627036,
+                "tail_mean_excitation": 0.06562940776348114,
+                "waypoint_errors_deg": {},
+                "penalty": 0.42743298830627036
+              },
+              {
+                "scenario": "vertical_return",
+                "final_angle_deg": 60.10279736549042,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.10078140878696942,
+                "tail_mean_excitation": 0.05651426687836647,
+                "waypoint_errors_deg": {
+                  "155": 0.13108473096903595,
+                  "145": 0.028323391451967456
+                },
+                "penalty": 0.26018953120797284
+              },
+              {
+                "scenario": "rest_recovered125",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_recovered155",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              }
+            ]
+          },
+          {
+            "epoch": 120,
+            "score": 3.2958870935509843,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 155.21194474681622,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 0.12855288017264543,
+                "tail_mean_excitation": 0.0703502669930458,
+                "waypoint_errors_deg": {},
+                "penalty": 0.12855288017264543
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 15.12569680350888,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.12354527793118258,
+                "tail_mean_excitation": 0.030366811901330948,
+                "waypoint_errors_deg": {},
+                "penalty": 0.12354527793118258
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909605854,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.53348956961696,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.4806172216966986,
+                "tail_mean_excitation": 0.06022486463189125,
+                "waypoint_errors_deg": {},
+                "penalty": 0.4806172216966986
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 104.33948643523378,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.5552722770832448,
+                "tail_mean_excitation": 0.04503238573670387,
+                "waypoint_errors_deg": {},
+                "penalty": 0.11105445541664896
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 126.05232543988005,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.0468103808537772,
+                "tail_mean_excitation": 0.051424287259578705,
+                "waypoint_errors_deg": {},
+                "penalty": 1.0468103808537772
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440073265603,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 155.17014448949925,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.1616937039549084,
+                "tail_mean_excitation": 0.06483348459005356,
+                "waypoint_errors_deg": {},
+                "penalty": 0.1616937039549084
+              },
+              {
+                "scenario": "lower75_to45",
+                "final_angle_deg": 44.524961629071235,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.4285289582469828,
+                "tail_mean_excitation": 0.06542615592479706,
+                "waypoint_errors_deg": {},
+                "penalty": 0.4285289582469828
+              },
+              {
+                "scenario": "lower105_to45",
+                "final_angle_deg": 44.425028046569054,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.5323372590419577,
+                "tail_mean_excitation": 0.0656982809305191,
+                "waypoint_errors_deg": {},
+                "penalty": 0.5323372590419577
+              },
+              {
+                "scenario": "vertical_return",
+                "final_angle_deg": 60.0280759709221,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.07724987831398449,
+                "tail_mean_excitation": 0.05654381215572357,
+                "waypoint_errors_deg": {
+                  "155": 0.1406097969036182,
+                  "145": 0.06488728101858025
+                },
+                "penalty": 0.28274695623618296
+              },
+              {
+                "scenario": "rest_recovered125",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_recovered155",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              }
+            ]
+          },
+          {
+            "epoch": 109,
+            "score": 3.7998925302374174,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 154.97041555240344,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 0.2183021472630299,
+                "tail_mean_excitation": 0.07251530885696411,
+                "waypoint_errors_deg": {},
+                "penalty": 0.2183021472630299
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 15.14991075646739,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.14755788830655922,
+                "tail_mean_excitation": 0.029976898804306984,
+                "waypoint_errors_deg": {},
+                "penalty": 0.14755788830655922
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909630766,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.62260183579285,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.3902173181851319,
+                "tail_mean_excitation": 0.060102641582489014,
+                "waypoint_errors_deg": {},
+                "penalty": 0.3902173181851319
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 104.87747481078107,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.07231635321125171,
+                "tail_mean_excitation": 0.044913146644830704,
+                "waypoint_errors_deg": {},
+                "penalty": 0.014463270642250343
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 126.32467286042564,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.3157970182619882,
+                "tail_mean_excitation": 0.05120217427611351,
+                "waypoint_errors_deg": {},
+                "penalty": 1.3157970182619882
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.16744007304824,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 155.0298799599467,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.07698138484922254,
+                "tail_mean_excitation": 0.060771286487579346,
+                "waypoint_errors_deg": {},
+                "penalty": 0.07698138484922254
+              },
+              {
+                "scenario": "lower75_to45",
+                "final_angle_deg": 44.51792061041936,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.4373486629332083,
+                "tail_mean_excitation": 0.06543184071779251,
+                "waypoint_errors_deg": {},
+                "penalty": 0.4373486629332083
+              },
+              {
+                "scenario": "lower105_to45",
+                "final_angle_deg": 44.4274823736254,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.5309204253216119,
+                "tail_mean_excitation": 0.065696582198143,
+                "waypoint_errors_deg": {},
+                "penalty": 0.5309204253216119
+              },
+              {
+                "scenario": "vertical_return",
+                "final_angle_deg": 59.6216545825695,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.3289446944272684,
+                "tail_mean_excitation": 0.05686243623495102,
+                "waypoint_errors_deg": {
+                  "155": 0.1064965887695924,
+                  "145": 0.2328631312775542
+                },
+                "penalty": 0.668304414474415
+              },
+              {
+                "scenario": "rest_recovered125",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_recovered155",
+                "final_angle_deg": 17.167440072824277,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "waypoint_errors_deg": {},
+                "penalty": 0.0
+              }
+            ]
+          }
+        ],
+        "selected_epoch": 80,
+        "selected_from_round": 2,
+        "selected_closed_loop_score": 3.0061636853021816,
+        "retained_previous_round": false
+      }
+    ],
+    "train_episodes": 70,
+    "validation_episodes": 34,
+    "validation_steps": 22000,
+    "validation_seed": 110067,
+    "validation_episode_stops": {
+      "physical_failures": 0,
+      "left_training_angle_coverage": 0,
+      "warmup_control_steps": 3600,
+      "warmup_control_dt_s": 0.02,
+      "warmup_failed_episodes": 0,
+      "family_transitions": {
+        "0": 1200,
+        "1": 1000,
+        "2": 600,
+        "3": 600,
+        "4": 600,
+        "5": 600,
+        "6": 600,
+        "7": 600,
+        "8": 600,
+        "9": 600,
+        "10": 600,
+        "11": 1500,
+        "12": 1500,
+        "13": 600,
+        "14": 600,
+        "15": 600,
+        "16": 600,
+        "17": 600,
+        "18": 600,
+        "19": 600,
+        "20": 600,
+        "21": 600,
+        "22": 600,
+        "23": 600,
+        "24": 600,
+        "25": 600,
+        "26": 600,
+        "27": 600,
+        "28": 600,
+        "29": 600,
+        "30": 600,
+        "31": 600
+      }
+    },
+    "epochs_per_round": 120,
+    "normalization": "preserved from parent checkpoint",
+    "focused_endpoint_refinement": true,
+    "imitation_curriculum": "endurance_transitions",
+    "selection": "held-out closed-loop behavior score over parent, epoch snapshots and prior round winners",
+    "parent_closed_loop_validation": {
+      "score": 10060.357633962682,
+      "scenarios": [
+        {
+          "scenario": "vertical",
+          "final_angle_deg": 155.01554154469423,
+          "initial_capacity": [
+            0.95,
+            0.95,
+            0.95,
+            0.95,
+            0.95,
+            0.95
+          ],
+          "tail_angle_rmse_deg": 0.36388863749185063,
+          "tail_mean_excitation": 0.07930891215801239,
+          "waypoint_errors_deg": {},
+          "penalty": 0.36388863749185063
+        },
+        {
+          "scenario": "extension",
+          "final_angle_deg": 17.057217674220873,
+          "initial_capacity": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": 2.058419840257647,
+          "tail_mean_excitation": 0.002892702119424939,
+          "waypoint_errors_deg": {},
+          "penalty": 2.058419840257647
+        },
+        {
+          "scenario": "release",
+          "final_angle_deg": 16.916859909489762,
+          "initial_capacity": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": null,
+          "tail_mean_excitation": 0.0,
+          "waypoint_errors_deg": {},
+          "penalty": 0.0
+        },
+        {
+          "scenario": "hold",
+          "final_angle_deg": 74.61203809487478,
+          "initial_capacity": [
+            0.8,
+            0.8,
+            0.8,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": 0.3803799931596256,
+          "tail_mean_excitation": 0.05998334661126137,
+          "waypoint_errors_deg": {},
+          "penalty": 0.3803799931596256
+        },
+        {
+          "scenario": "weak_trigger",
+          "final_angle_deg": 104.44534373137279,
+          "initial_capacity": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": 0.4197168219868052,
+          "tail_mean_excitation": 0.044925954192876816,
+          "waypoint_errors_deg": {},
+          "penalty": 0.08394336439736105
+        },
+        {
+          "scenario": "fatigued_hold125",
+          "final_angle_deg": 124.88849926579563,
+          "initial_capacity": [
+            0.8,
+            0.8,
+            0.8,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": 0.12402627501176193,
+          "tail_mean_excitation": 0.0520181879401207,
+          "waypoint_errors_deg": {},
+          "penalty": 0.12402627501176193
+        },
+        {
+          "scenario": "fatigued_release125",
+          "final_angle_deg": 17.167440072727192,
+          "initial_capacity": [
+            0.8,
+            0.8,
+            0.8,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": null,
+          "tail_mean_excitation": 0.0,
+          "waypoint_errors_deg": {},
+          "penalty": 0.0
+        },
+        {
+          "scenario": "rest_old_target125",
+          "final_angle_deg": 17.167440072872726,
+          "initial_capacity": [
+            0.8,
+            0.8,
+            0.8,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": null,
+          "tail_mean_excitation": 0.0,
+          "waypoint_errors_deg": {},
+          "penalty": 0.0
+        },
+        {
+          "scenario": "nominal_vertical",
+          "final_angle_deg": 155.62828218502,
+          "initial_capacity": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": 0.4607799336820275,
+          "tail_mean_excitation": 0.07758118957281113,
+          "waypoint_errors_deg": {},
+          "penalty": 0.4607799336820275
+        },
+        {
+          "scenario": "lower75_to45",
+          "final_angle_deg": 18.894686948980375,
+          "initial_capacity": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": 26.480545933242073,
+          "tail_mean_excitation": 0.04251626133918762,
+          "waypoint_errors_deg": {},
+          "penalty": 5026.480545933242
+        },
+        {
+          "scenario": "lower105_to45",
+          "final_angle_deg": 18.85406975395928,
+          "initial_capacity": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": 26.185218183463654,
+          "tail_mean_excitation": 0.04262379929423332,
+          "waypoint_errors_deg": {},
+          "penalty": 5026.185218183464
+        },
+        {
+          "scenario": "vertical_return",
+          "final_angle_deg": 63.247653423320344,
+          "initial_capacity": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": 3.3615940772236104,
+          "tail_mean_excitation": 0.055630870163440704,
+          "waypoint_errors_deg": {
+            "155": 0.42154194623643093,
+            "145": 0.43729577851532514
+          },
+          "penalty": 4.220431801975367
+        },
+        {
+          "scenario": "rest_recovered125",
+          "final_angle_deg": 17.167440072824277,
+          "initial_capacity": [
+            0.95,
+            0.95,
+            0.95,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": null,
+          "tail_mean_excitation": 0.0,
+          "waypoint_errors_deg": {},
+          "penalty": 0.0
+        },
+        {
+          "scenario": "rest_recovered155",
+          "final_angle_deg": 17.167440072824277,
+          "initial_capacity": [
+            0.95,
+            0.95,
+            0.95,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tail_angle_rmse_deg": null,
+          "tail_mean_excitation": 0.0,
+          "waypoint_errors_deg": {},
+          "penalty": 0.0
+        }
+      ],
+      "validation_excitation_rmse": 0.005119729132596701
+    },
+    "closed_loop_validation_seed": 210067,
+    "command_range_deg": [
+      15,
+      155
+    ],
+    "episode_duration_s": [
+      12,
+      30
+    ],
+    "near_vertical_warmup": {
+      "duration_s": 8,
+      "controller": "diagnostic_heuristic",
+      "reset_angle_deg": 75,
+      "goals_deg": [
+        148,
+        151,
+        153,
+        154.5,
+        155,
+        155,
+        105,
+        155,
+        145
+      ],
+      "counts_toward_label_budget": false,
+      "history": "ordinary continuous physical history; no state reset at handoff"
+    },
+    "required_behavior_priority": true,
+    "transition_retention": true,
+    "supervised_sample_weights": {
+      "angle_above_140_deg": 4,
+      "trigger_in_0_to_02": 6.0,
+      "other": 1,
+      "batch_normalized": true
+    },
+    "teacher_excitation_noise_std": {
+      "usual": 0.012,
+      "passive_rest": 0.0,
+      "angle_above_140_deg": 0.0
+    },
+    "zero_excitation_labels": {
+      "tolerance": 1e-05,
+      "raw_gaussian_mean_target": -0.03,
+      "negative_margin_scope": "all-zero teacher rows plus inactive flexors with active extensors",
+      "inactive_flexor_margin": 0.01,
+      "inactive_flexor_margin_scale": "min(teacher_max_extensor / 0.05, 1)",
+      "runtime": "existing PPO action clipping only; no trigger mask"
+    },
+    "initial_capacity_range": [
+      0.75,
+      1.0
+    ],
+    "initial_capacity_profiles": [
+      [
+        1,
+        1
+      ],
+      [
+        0.75,
+        1
+      ],
+      [
+        0.85,
+        1
+      ],
+      [
+        1,
+        0.85
+      ],
+      [
+        0.9,
+        0.9
+      ],
+      [
+        0.85,
+        0.85
+      ],
+      [
+        1,
+        0.95
+      ],
+      [
+        0.8,
+        1
+      ]
+    ],
+    "capacity_profile_order": [
+      "flexor_capacity",
+      "extensor_capacity"
+    ],
+    "initial_capacity_profile_distributions": [
+      {
+        "families": [
+          30,
+          31
+        ],
+        "flexor_capacity_uniform": [
+          0.9,
+          0.98
+        ],
+        "extensor_capacity": 1.0
+      }
+    ],
+    "initialization": "training-only muscle reset and matching initial sensor history before the first step",
+    "payload_mass_range_kg": [
+      0.95,
+      1.05
+    ],
+    "release_remembered_target_deg": [
+      15,
+      45,
+      75,
+      105,
+      125,
+      155
+    ],
+    "systematic_families": [
+      "hold75_fresh",
+      "hold75_flexors_075",
+      "hold120_fresh",
+      "hold120_flexors_075",
+      "hold125_fresh",
+      "hold125_flexors_075",
+      "hold125_flexors_085",
+      "release125_flexors_075",
+      "release125_flexors_085",
+      "rest_requested125_flexors_075",
+      "rest_requested155_flexors_085",
+      "hold155_fresh",
+      "hold155_extensors_095",
+      "lower45_flexors_085",
+      "weak_trigger_raise",
+      "lower15_then_release",
+      "near148_goal150_fresh",
+      "near151_goal154_extensors085",
+      "near153_goal155_uniform090",
+      "near1545_goal155_uniform085",
+      "prepared155_goal155_fresh",
+      "prepared155_goal155_extensors095",
+      "rest_requested125_fresh",
+      "rest_requested155_fresh",
+      "release75_fresh",
+      "release75_flexors080",
+      "lower75_to45_fresh",
+      "prepared105_to45_fresh",
+      "prepared155_to145_fresh",
+      "prepared145_to60_fresh",
+      "rest_requested125_recovered_flexors",
+      "rest_requested155_recovered_flexors"
+    ],
+    "release_training_angle_range_deg": [
+      15,
+      130
+    ],
+    "training_state_upper_deg": 160.0,
+    "training_coverage_stop": "Ends only data collection episodes above 160 deg; no runtime limit or state change.",
+    "uncovered_conditions": [
+      "Release beyond the upper vertical pose; imported muscle paths are not calibrated there."
+    ],
+    "limitation": "Imitation, not independent PPO optimization; no runtime teacher or force override."
+  },
+  "parent_checkpoint_sha256": "d716b86b5c02ca05204885c99f5f9b2fd6d0e7ef71c9738c51f52b72d1f6abd3",
+  "parent_warm_start": {
+    "method": "causal_dataset_aggregation",
+    "teacher": "diagnostic_heuristic",
+    "demonstration_steps": 60000,
+    "seed": 10057,
+    "rounds": [
+      {
+        "round": 1,
+        "teacher_probability": 1.0,
+        "training_transitions": 20000,
+        "training_episodes": 31,
+        "validation_excitation_rmse": 0.0016195038940657507,
+        "collection_episode_stops": {
+          "physical_failures": 0,
+          "left_training_angle_coverage": 0,
+          "warmup_physical_steps": 2400,
+          "warmup_failed_episodes": 0,
+          "family_transitions": {
+            "0": 1200,
+            "1": 1200,
+            "2": 1200,
+            "3": 1200,
+            "4": 800,
+            "5": 600,
+            "6": 600,
+            "7": 600,
+            "8": 600,
+            "9": 600,
+            "10": 600,
+            "11": 1500,
+            "12": 1500,
+            "13": 600,
+            "14": 600,
+            "15": 600,
+            "16": 600,
+            "17": 600,
+            "18": 600,
+            "19": 600,
+            "20": 600,
+            "21": 600,
+            "22": 600,
+            "23": 600,
+            "24": 600,
+            "25": 600
+          }
+        },
+        "all_zero_label_fraction": 0.2204499989748001,
+        "closed_loop_validation": [
+          {
+            "epoch": 40,
+            "score": 18328.339947723904,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 319.05161963628547,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 162.54616572457627,
+                "tail_mean_excitation": 0.07604959607124329,
+                "penalty": 2162.5461657245764
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 17.94202139484348,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.1371283648678778,
+                "tail_mean_excitation": 0.2362186759710312,
+                "penalty": 5001.137128364868
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909534942,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 77.251423637763,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.2689200599668364,
+                "tail_mean_excitation": 0.05848550423979759,
+                "penalty": 2.2689200599668364
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 105.7432166431735,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.934493609532955,
+                "tail_mean_excitation": 0.04489149898290634,
+                "penalty": 0.18689872190659101
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 126.2968276057402,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.310936417260251,
+                "tail_mean_excitation": 0.05133198946714401,
+                "penalty": 1.310936417260251
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072750367,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 316.1642056249592,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 160.88989843532488,
+                "tail_mean_excitation": 0.07747051864862442,
+                "penalty": 11160.889898435325
+              }
+            ]
+          },
+          {
+            "epoch": 80,
+            "score": 18330.045949575393,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 318.0560220830512,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 165.75714489621643,
+                "tail_mean_excitation": 0.1035056784749031,
+                "penalty": 2165.7571448962162
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 14.858718729706517,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.14386103239355721,
+                "tail_mean_excitation": 0.3491925597190857,
+                "penalty": 5000.143861032394
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909525563,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 76.87292605685369,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.8799335913703752,
+                "tail_mean_excitation": 0.058680642396211624,
+                "penalty": 1.8799335913703752
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 104.97924814552572,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.17660300416529517,
+                "tail_mean_excitation": 0.044909484684467316,
+                "penalty": 0.03532060083305904
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 126.06165587722447,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.0796805133226044,
+                "tail_mean_excitation": 0.051777247339487076,
+                "penalty": 1.0796805133226044
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072869418,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 316.35131970765417,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 161.1500089412571,
+                "tail_mean_excitation": 0.08079008758068085,
+                "penalty": 11161.150008941257
+              }
+            ]
+          },
+          {
+            "epoch": 120,
+            "score": 18327.71019377133,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 317.45062689836436,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 164.1988372241868,
+                "tail_mean_excitation": 0.09385400265455246,
+                "penalty": 2164.1988372241867
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 14.863795383186556,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.14024169456811106,
+                "tail_mean_excitation": 0.356449693441391,
+                "penalty": 5000.140241694568
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909548812,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 76.88992938623399,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.9101502784560622,
+                "tail_mean_excitation": 0.05912100151181221,
+                "penalty": 1.9101502784560622
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 105.2980971273233,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.4943249534243876,
+                "tail_mean_excitation": 0.04490061476826668,
+                "penalty": 0.09886499068487753
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 126.02301191340999,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.0419343224024915,
+                "tail_mean_excitation": 0.05158545821905136,
+                "penalty": 1.0419343224024915
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072912832,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 315.52905548498575,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 160.32016526103183,
+                "tail_mean_excitation": 0.08133618533611298,
+                "penalty": 11160.320165261031
+              }
+            ]
+          },
+          {
+            "epoch": 106,
+            "score": 18326.124739006827,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 317.62737278483286,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 162.26736825132997,
+                "tail_mean_excitation": 0.08004559576511383,
+                "penalty": 2162.26736825133
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 14.864798155779543,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.13926598790481465,
+                "tail_mean_excitation": 0.3540421426296234,
+                "penalty": 5000.139265987905
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909598394,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 77.1612652369535,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.182336552859717,
+                "tail_mean_excitation": 0.058672841638326645,
+                "penalty": 2.182336552859717
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 105.40323113024064,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.5974145102501875,
+                "tail_mean_excitation": 0.04489874839782715,
+                "penalty": 0.11948290205003752
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 126.10112969058046,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.1204526365468461,
+                "tail_mean_excitation": 0.05139545723795891,
+                "penalty": 1.1204526365468461
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.16744007280648,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 315.5038481677172,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 160.29583267613714,
+                "tail_mean_excitation": 0.0810166448354721,
+                "penalty": 11160.295832676136
+              }
+            ]
+          }
+        ],
+        "selected_epoch": 106
+      },
+      {
+        "round": 2,
+        "teacher_probability": 0.0,
+        "training_transitions": 40000,
+        "training_episodes": 68,
+        "validation_excitation_rmse": 0.005314618617720529,
+        "collection_episode_stops": {
+          "physical_failures": 0,
+          "left_training_angle_coverage": 5,
+          "warmup_physical_steps": 2400,
+          "warmup_failed_episodes": 0,
+          "family_transitions": {
+            "0": 1200,
+            "1": 1200,
+            "2": 1200,
+            "3": 1200,
+            "4": 1200,
+            "5": 1200,
+            "6": 1200,
+            "7": 1200,
+            "8": 1200,
+            "9": 1200,
+            "10": 1016,
+            "11": 299,
+            "12": 298,
+            "13": 600,
+            "14": 600,
+            "15": 600,
+            "16": 161,
+            "17": 600,
+            "18": 600,
+            "19": 600,
+            "20": 109,
+            "21": 117,
+            "22": 600,
+            "23": 600,
+            "24": 600,
+            "25": 600
+          }
+        },
+        "all_zero_label_fraction": 0.2653000056743622,
+        "closed_loop_validation": [
+          {
+            "epoch": 40,
+            "score": 5618.8713669174185,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 238.02767530931536,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 85.94702517689636,
+                "tail_mean_excitation": 0.061718810349702835,
+                "penalty": 2085.947025176896
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 17.071066664647955,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.070674300186131,
+                "tail_mean_excitation": 0.004740748554468155,
+                "penalty": 2.070674300186131
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.91685990960427,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 70.56897481786051,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 4.469365078414128,
+                "tail_mean_excitation": 0.06292197853326797,
+                "penalty": 4.469365078414128
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 17.167440072730084,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 87.83255992727061,
+                "tail_mean_excitation": 0.0,
+                "penalty": 517.5665119854541
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 121.1772732470059,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 3.797312261148564,
+                "tail_mean_excitation": 0.053693752735853195,
+                "penalty": 3.797312261148564
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072791788,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 151.80731755363345,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 5.020478115319763,
+                "tail_mean_excitation": 0.009552481584250927,
+                "penalty": 3005.0204781153197
+              }
+            ]
+          },
+          {
+            "epoch": 80,
+            "score": 13159.37666160084,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 234.0416927359992,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 78.91257149563818,
+                "tail_mean_excitation": 0.06921441107988358,
+                "penalty": 2078.912571495638
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 16.840834647500056,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.8435085997267757,
+                "tail_mean_excitation": 0.005635489244014025,
+                "penalty": 1.8435085997267757
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.91685990964811,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.527242356001,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.4658059042250693,
+                "tail_mean_excitation": 0.0606725700199604,
+                "penalty": 0.4658059042250693
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 104.25660651684146,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.512888306884567,
+                "tail_mean_excitation": 0.04548299312591553,
+                "penalty": 0.1025776613769134
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 125.40466830247472,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.3968222507952032,
+                "tail_mean_excitation": 0.05267592519521713,
+                "penalty": 0.3968222507952032
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.16744007265255,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 232.77338039666688,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 77.65537568907969,
+                "tail_mean_excitation": 0.06652001291513443,
+                "penalty": 11077.655375689079
+              }
+            ]
+          },
+          {
+            "epoch": 120,
+            "score": 13157.261225120252,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 233.45520359053575,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 78.32397159141297,
+                "tail_mean_excitation": 0.06958425045013428,
+                "penalty": 2078.323971591413
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 15.664632543133289,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.712107434984789,
+                "tail_mean_excitation": 0.021401971578598022,
+                "penalty": 0.712107434984789
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909739323,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.6789642021587,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.3068662762249649,
+                "tail_mean_excitation": 0.06004923954606056,
+                "penalty": 0.3068662762249649
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 104.51121566234146,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.28832686400906077,
+                "tail_mean_excitation": 0.044902388006448746,
+                "penalty": 0.05766537280181216
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 125.35130235364966,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.34034338992504853,
+                "tail_mean_excitation": 0.05197934806346893,
+                "penalty": 0.34034338992504853
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072842318,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 232.63470901964138,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 77.52027105490268,
+                "tail_mean_excitation": 0.06583933532238007,
+                "penalty": 11077.520271054902
+              }
+            ]
+          },
+          {
+            "epoch": 112,
+            "score": 13157.796226854098,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 233.55374066813718,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 78.42196050112639,
+                "tail_mean_excitation": 0.06949752569198608,
+                "penalty": 2078.4219605011263
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 15.673661009481698,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.7100345618723706,
+                "tail_mean_excitation": 0.021385742351412773,
+                "penalty": 0.7100345618723706
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909699905,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.52801702525609,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.45990354774010195,
+                "tail_mean_excitation": 0.06018185243010521,
+                "penalty": 0.45990354774010195
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 104.02649413264889,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.7533135210659775,
+                "tail_mean_excitation": 0.04507052153348923,
+                "penalty": 0.1506627042131955
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 125.38048135506652,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.3706130694351403,
+                "tail_mean_excitation": 0.05197048559784889,
+                "penalty": 0.3706130694351403
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.16744007277742,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 232.79649452643787,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 77.68305246971093,
+                "tail_mean_excitation": 0.06574137508869171,
+                "penalty": 11077.68305246971
+              }
+            ]
+          }
+        ],
+        "selected_epoch": 40
+      },
+      {
+        "round": 3,
+        "teacher_probability": 0.0,
+        "training_transitions": 60000,
+        "training_episodes": 103,
+        "validation_excitation_rmse": 0.0021036505533989884,
+        "collection_episode_stops": {
+          "physical_failures": 0,
+          "left_training_angle_coverage": 5,
+          "warmup_physical_steps": 2400,
+          "warmup_failed_episodes": 0,
+          "family_transitions": {
+            "0": 1200,
+            "1": 1200,
+            "2": 1200,
+            "3": 1200,
+            "4": 1200,
+            "5": 1200,
+            "6": 1200,
+            "7": 1200,
+            "8": 1125,
+            "9": 600,
+            "10": 600,
+            "11": 1500,
+            "12": 1500,
+            "13": 600,
+            "14": 600,
+            "15": 600,
+            "16": 600,
+            "17": 68,
+            "18": 54,
+            "19": 54,
+            "20": 48,
+            "21": 51,
+            "22": 600,
+            "23": 600,
+            "24": 600,
+            "25": 600
+          }
+        },
+        "all_zero_label_fraction": 0.2632499933242798,
+        "closed_loop_validation": [
+          {
+            "epoch": 40,
+            "score": 5.70663293801721,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 155.62558296748992,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 1.0827970540143073,
+                "tail_mean_excitation": 0.0864054337143898,
+                "penalty": 1.0827970540143073
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 17.037186792057494,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.03782988224388,
+                "tail_mean_excitation": 0.003149739233776927,
+                "penalty": 2.03782988224388
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909458378,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.16500963840518,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.850184890370613,
+                "tail_mean_excitation": 0.06030075624585152,
+                "penalty": 0.850184890370613
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 101.83803721600745,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.975562242658554,
+                "tail_mean_excitation": 0.04492071643471718,
+                "penalty": 0.5951124485317109
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 125.17401588492682,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.15908846226887466,
+                "tail_mean_excitation": 0.051866017282009125,
+                "penalty": 0.15908846226887466
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072756445,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 155.94001523626693,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.9816202005878244,
+                "tail_mean_excitation": 0.10537105053663254,
+                "penalty": 0.9816202005878244
+              }
+            ]
+          },
+          {
+            "epoch": 80,
+            "score": 3.747613972193491,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 154.499307453325,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 1.2296557658820761,
+                "tail_mean_excitation": 0.10161454230546951,
+                "penalty": 1.2296557658820761
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 15.15109396726095,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.14173563582958335,
+                "tail_mean_excitation": 0.03007984347641468,
+                "penalty": 0.14173563582958335
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909668997,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.10200945872012,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.8950451267961121,
+                "tail_mean_excitation": 0.060328125953674316,
+                "penalty": 0.8950451267961121
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 103.66311843588399,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 1.2169234989907065,
+                "tail_mean_excitation": 0.044937387108802795,
+                "penalty": 0.2433846997981413
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 124.27162028530226,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.7406467028606539,
+                "tail_mean_excitation": 0.052339471876621246,
+                "penalty": 0.7406467028606539
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.16744007281917,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 155.8548088537198,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.49714604102692395,
+                "tail_mean_excitation": 0.07826176285743713,
+                "penalty": 0.49714604102692395
+              }
+            ]
+          },
+          {
+            "epoch": 120,
+            "score": 3.4714380440002737,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 155.01554154469423,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 0.36388863749185063,
+                "tail_mean_excitation": 0.07930891215801239,
+                "penalty": 0.36388863749185063
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 17.057217674220873,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.058419840257647,
+                "tail_mean_excitation": 0.002892702119424939,
+                "penalty": 2.058419840257647
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909489762,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.61203809487478,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.3803799931596256,
+                "tail_mean_excitation": 0.05998334661126137,
+                "penalty": 0.3803799931596256
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 104.44534373137279,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.4197168219868052,
+                "tail_mean_excitation": 0.044925954192876816,
+                "penalty": 0.08394336439736105
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 124.88849926579563,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.12402627501176193,
+                "tail_mean_excitation": 0.0520181879401207,
+                "penalty": 0.12402627501176193
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072727192,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 155.62828218502,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.4607799336820275,
+                "tail_mean_excitation": 0.07758118957281113,
+                "penalty": 0.4607799336820275
+              }
+            ]
+          },
+          {
+            "epoch": 108,
+            "score": 3.7802922159979357,
+            "scenarios": [
+              {
+                "scenario": "vertical",
+                "final_angle_deg": 155.38376388458838,
+                "initial_capacity": [
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95,
+                  0.95
+                ],
+                "tail_angle_rmse_deg": 0.2810606425050285,
+                "tail_mean_excitation": 0.07299547642469406,
+                "penalty": 0.2810606425050285
+              },
+              {
+                "scenario": "extension",
+                "final_angle_deg": 17.04082287287153,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 2.0420789822644876,
+                "tail_mean_excitation": 0.003095055930316448,
+                "penalty": 2.0420789822644876
+              },
+              {
+                "scenario": "release",
+                "final_angle_deg": 16.916859909584936,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "hold",
+                "final_angle_deg": 74.61949394704888,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.3717346917256966,
+                "tail_mean_excitation": 0.05997757986187935,
+                "penalty": 0.3717346917256966
+              },
+              {
+                "scenario": "weak_trigger",
+                "final_angle_deg": 103.94003710804589,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.9169213801362794,
+                "tail_mean_excitation": 0.044929418712854385,
+                "penalty": 0.1833842760272559
+              },
+              {
+                "scenario": "fatigued_hold125",
+                "final_angle_deg": 124.65221881921738,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.3608269223537641,
+                "tail_mean_excitation": 0.0521436408162117,
+                "penalty": 0.3608269223537641
+              },
+              {
+                "scenario": "fatigued_release125",
+                "final_angle_deg": 17.167440072821677,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "rest_old_target125",
+                "final_angle_deg": 17.167440072872726,
+                "initial_capacity": [
+                  0.8,
+                  0.8,
+                  0.8,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": null,
+                "tail_mean_excitation": 0.0,
+                "penalty": 0.0
+              },
+              {
+                "scenario": "nominal_vertical",
+                "final_angle_deg": 155.8385531274907,
+                "initial_capacity": [
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "tail_angle_rmse_deg": 0.5412067011217032,
+                "tail_mean_excitation": 0.08157683163881302,
+                "penalty": 0.5412067011217032
+              }
+            ]
+          }
+        ],
+        "selected_epoch": 120
+      }
+    ],
+    "train_episodes": 103,
+    "validation_episodes": 31,
+    "validation_steps": 20000,
+    "validation_seed": 110057,
+    "validation_episode_stops": {
+      "physical_failures": 0,
+      "left_training_angle_coverage": 0,
+      "warmup_physical_steps": 2400,
+      "warmup_failed_episodes": 0,
+      "family_transitions": {
+        "0": 1200,
+        "1": 1200,
+        "2": 1200,
+        "3": 1200,
+        "4": 800,
+        "5": 600,
+        "6": 600,
+        "7": 600,
+        "8": 600,
+        "9": 600,
+        "10": 600,
+        "11": 1500,
+        "12": 1500,
+        "13": 600,
+        "14": 600,
+        "15": 600,
+        "16": 600,
+        "17": 600,
+        "18": 600,
+        "19": 600,
+        "20": 600,
+        "21": 600,
+        "22": 600,
+        "23": 600,
+        "24": 600,
+        "25": 600
+      }
+    },
+    "epochs_per_round": 120,
+    "normalization": "preserved from parent checkpoint",
+    "focused_endpoint_refinement": true,
+    "imitation_curriculum": "endurance_reachable",
+    "selection": "held-out closed-loop endpoint/release/hold/weak-trigger score over epoch snapshots",
+    "closed_loop_validation_seed": 210057,
+    "command_range_deg": [
+      15,
+      155
+    ],
+    "episode_duration_s": [
+      12,
+      30
+    ],
+    "near_vertical_warmup": {
+      "duration_s": 8,
+      "controller": "diagnostic_heuristic",
+      "reset_angle_deg": 75,
+      "goals_deg": [
+        148,
+        151,
+        153,
+        154.5,
+        155,
+        155
+      ],
+      "counts_toward_label_budget": false,
+      "history": "ordinary continuous physical history; no state reset at handoff"
+    },
+    "required_behavior_priority": true,
+    "supervised_sample_weights": {
+      "angle_above_140_deg": 4,
+      "trigger_in_0_to_02": 6.0,
+      "other": 1,
+      "batch_normalized": true
+    },
+    "teacher_excitation_noise_std": {
+      "usual": 0.012,
+      "passive_rest": 0.0,
+      "angle_above_140_deg": 0.0
+    },
+    "zero_excitation_labels": {
+      "tolerance": 1e-05,
+      "raw_gaussian_mean_target": -0.03,
+      "negative_margin_scope": "all-zero teacher rows plus inactive flexors with active extensors",
+      "inactive_flexor_margin": 0.01,
+      "inactive_flexor_margin_scale": "min(teacher_max_extensor / 0.05, 1)",
+      "runtime": "existing PPO action clipping only; no trigger mask"
+    },
+    "initial_capacity_range": [
+      0.75,
+      1.0
+    ],
+    "initial_capacity_profiles": [
+      [
+        1,
+        1
+      ],
+      [
+        0.75,
+        1
+      ],
+      [
+        0.85,
+        1
+      ],
+      [
+        1,
+        0.85
+      ],
+      [
+        0.9,
+        0.9
+      ],
+      [
+        0.85,
+        0.85
+      ],
+      [
+        1,
+        0.95
+      ],
+      [
+        0.8,
+        1
+      ]
+    ],
+    "capacity_profile_order": [
+      "flexor_capacity",
+      "extensor_capacity"
+    ],
+    "initialization": "training-only muscle reset and matching initial sensor history before the first step",
+    "payload_mass_range_kg": [
+      0.95,
+      1.05
+    ],
+    "release_remembered_target_deg": [
+      15,
+      45,
+      75,
+      105,
+      125,
+      155
+    ],
+    "systematic_families": [
+      "hold75_fresh",
+      "hold75_flexors_075",
+      "hold120_fresh",
+      "hold120_flexors_075",
+      "hold125_fresh",
+      "hold125_flexors_075",
+      "hold125_flexors_085",
+      "release125_flexors_075",
+      "release125_flexors_085",
+      "rest_requested125_flexors_075",
+      "rest_requested155_flexors_085",
+      "hold155_fresh",
+      "hold155_extensors_095",
+      "lower45_flexors_085",
+      "weak_trigger_raise",
+      "lower15_then_release",
+      "near148_goal150_fresh",
+      "near151_goal154_extensors085",
+      "near153_goal155_uniform090",
+      "near1545_goal155_uniform085",
+      "prepared155_goal155_fresh",
+      "prepared155_goal155_extensors095",
+      "rest_requested125_fresh",
+      "rest_requested155_fresh",
+      "release75_fresh",
+      "release75_flexors080"
+    ],
+    "release_training_angle_range_deg": [
+      15,
+      130
+    ],
+    "training_state_upper_deg": 160.0,
+    "training_coverage_stop": "Ends only data collection episodes above 160 deg; no runtime limit or state change.",
+    "uncovered_conditions": [
+      "Release beyond the upper vertical pose; imported muscle paths are not calibrated there."
+    ],
+    "limitation": "Imitation, not independent PPO optimization; no runtime teacher or force override."
+  },
+  "log_std_init": -4.0,
+  "learning_rate": 0.0003,
+  "target_kl": null,
+  "config": {
+    "physics_dt": 0.001,
+    "frame_skip": 20,
+    "episode_seconds": 10,
+    "reference_center": 1.3089969389957472,
+    "reference_amplitude": 0.0,
+    "reference_frequency": 0.18,
+    "randomize_reference": false,
+    "initial_angle_noise": 0.0,
+    "initial_activation": 0.03,
+    "payload_mass": 1.0,
+    "motor_delay": 0.04,
+    "fatigue_rate": 0.00912,
+    "recovery_rate": 0.00094,
+    "rest_recovery_multiplier": 15.0,
+    "rest_activation_threshold": 0.01,
+    "flexor_active_force_scale": 1.3692387127666734,
+    "extensor_active_force_scale": 1.0,
+    "muscle_force_length_width": 0.7949002962804319,
+    "rom_margin": 0.17453292519943295,
+    "joint_load_force_threshold": 600.0,
+    "fiber_stretch_threshold": 1.15,
+    "tendon_strain_threshold": 0.04,
+    "rom_cost_weight": 0.1,
+    "joint_load_cost_weight": 0.1,
+    "fiber_stretch_cost_weight": 0.1,
+    "tendon_stretch_cost_weight": 0.1,
+    "render_width": 960,
+    "render_height": 720,
+    "geometry": "myoarm",
+    "asset_dir": "data/myoarm",
+    "task_mode": "curriculum",
+    "history_steps": 10,
+    "target_max_speed": 1.0,
+    "target_max_acceleration": 3.0,
+    "initial_trigger": 1.0,
+    "payload_mass_min": 0.5,
+    "payload_mass_max": 2.0,
+    "initial_capacity_min": 0.7,
+    "curriculum_target_max": 2.7576202181510405,
+    "passive_limit_width": 0.1745329252,
+    "passive_limit_stiffness": 200.0,
+    "passive_limit_damping": 3.0,
+    "trigger_excess_cost_weight": 0.25,
+    "limit_velocity_cost_weight": 0.1
+  },
+  "dynamics_sha256": "23f8a1313177949964d42521e2fa721a0500a5cc733d92a551c77ed4ff143fa8",
+  "contract": {
+    "action_mapping": [
+      "BIClong",
+      "BICshort",
+      "BRA",
+      "TRIlong",
+      "TRIlat",
+      "TRImed"
+    ],
+    "action_semantics": "excitation_0_1_before_motor_delay; trigger_is_not_output_multiplier",
+    "physics_dt_s": 0.001,
+    "control_dt_s": 0.02,
+    "history_steps": 10,
+    "history_initialization": "repeat_reset_sensor_command_and_initial_excitation",
+    "geometry_sha256": "myoarm:93b0ca8f4ec90c9899ee7f05fee561e9911da91b:cc45335edebde779dd361d07c1a2f24499c0131a27e8ee314e23b3692f1c04eb"
+  },
+  "checkpoint_sha256": "816cad5d63ba518d0f4e4771bc199e13897de2ecc10100739845080c9ef18399",
+  "features_sha256": "87f7ba41cb104aeaa34e5ffad4c81927786c85741d2dbc5d66300063a94a8884",
+  "observation_names": [
+    "angle_centered_rad",
+    "angular_velocity_scaled",
+    "payload_mass_kg",
+    "BIClong/activation",
+    "BIClong/force_normalized",
+    "BIClong/fiber_length_normalized",
+    "BIClong/tendon_length_normalized",
+    "BIClong/tendon_strain",
+    "BIClong/remaining_capacity",
+    "BICshort/activation",
+    "BICshort/force_normalized",
+    "BICshort/fiber_length_normalized",
+    "BICshort/tendon_length_normalized",
+    "BICshort/tendon_strain",
+    "BICshort/remaining_capacity",
+    "BRA/activation",
+    "BRA/force_normalized",
+    "BRA/fiber_length_normalized",
+    "BRA/tendon_length_normalized",
+    "BRA/tendon_strain",
+    "BRA/remaining_capacity",
+    "TRIlong/activation",
+    "TRIlong/force_normalized",
+    "TRIlong/fiber_length_normalized",
+    "TRIlong/tendon_length_normalized",
+    "TRIlong/tendon_strain",
+    "TRIlong/remaining_capacity",
+    "TRIlat/activation",
+    "TRIlat/force_normalized",
+    "TRIlat/fiber_length_normalized",
+    "TRIlat/tendon_length_normalized",
+    "TRIlat/tendon_strain",
+    "TRIlat/remaining_capacity",
+    "TRImed/activation",
+    "TRImed/force_normalized",
+    "TRImed/fiber_length_normalized",
+    "TRImed/tendon_length_normalized",
+    "TRImed/tendon_strain",
+    "TRImed/remaining_capacity",
+    "target_angle_centered_rad",
+    "target_velocity_scaled",
+    "requested_target_centered_rad",
+    "trigger",
+    "history/1/sensor/angle_centered_rad",
+    "history/1/sensor/angular_velocity_scaled",
+    "history/1/sensor/payload_mass_kg",
+    "history/1/sensor/BIClong/activation",
+    "history/1/sensor/BIClong/force_normalized",
+    "history/1/sensor/BIClong/fiber_length_normalized",
+    "history/1/sensor/BIClong/tendon_length_normalized",
+    "history/1/sensor/BIClong/tendon_strain",
+    "history/1/sensor/BIClong/remaining_capacity",
+    "history/1/sensor/BICshort/activation",
+    "history/1/sensor/BICshort/force_normalized",
+    "history/1/sensor/BICshort/fiber_length_normalized",
+    "history/1/sensor/BICshort/tendon_length_normalized",
+    "history/1/sensor/BICshort/tendon_strain",
+    "history/1/sensor/BICshort/remaining_capacity",
+    "history/1/sensor/BRA/activation",
+    "history/1/sensor/BRA/force_normalized",
+    "history/1/sensor/BRA/fiber_length_normalized",
+    "history/1/sensor/BRA/tendon_length_normalized",
+    "history/1/sensor/BRA/tendon_strain",
+    "history/1/sensor/BRA/remaining_capacity",
+    "history/1/sensor/TRIlong/activation",
+    "history/1/sensor/TRIlong/force_normalized",
+    "history/1/sensor/TRIlong/fiber_length_normalized",
+    "history/1/sensor/TRIlong/tendon_length_normalized",
+    "history/1/sensor/TRIlong/tendon_strain",
+    "history/1/sensor/TRIlong/remaining_capacity",
+    "history/1/sensor/TRIlat/activation",
+    "history/1/sensor/TRIlat/force_normalized",
+    "history/1/sensor/TRIlat/fiber_length_normalized",
+    "history/1/sensor/TRIlat/tendon_length_normalized",
+    "history/1/sensor/TRIlat/tendon_strain",
+    "history/1/sensor/TRIlat/remaining_capacity",
+    "history/1/sensor/TRImed/activation",
+    "history/1/sensor/TRImed/force_normalized",
+    "history/1/sensor/TRImed/fiber_length_normalized",
+    "history/1/sensor/TRImed/tendon_length_normalized",
+    "history/1/sensor/TRImed/tendon_strain",
+    "history/1/sensor/TRImed/remaining_capacity",
+    "history/1/excitation/BIClong",
+    "history/1/excitation/BICshort",
+    "history/1/excitation/BRA",
+    "history/1/excitation/TRIlong",
+    "history/1/excitation/TRIlat",
+    "history/1/excitation/TRImed",
+    "history/1/command/target_angle_centered_rad",
+    "history/1/command/target_velocity_scaled",
+    "history/1/command/requested_target_centered_rad",
+    "history/1/command/trigger",
+    "history/2/sensor/angle_centered_rad",
+    "history/2/sensor/angular_velocity_scaled",
+    "history/2/sensor/payload_mass_kg",
+    "history/2/sensor/BIClong/activation",
+    "history/2/sensor/BIClong/force_normalized",
+    "history/2/sensor/BIClong/fiber_length_normalized",
+    "history/2/sensor/BIClong/tendon_length_normalized",
+    "history/2/sensor/BIClong/tendon_strain",
+    "history/2/sensor/BIClong/remaining_capacity",
+    "history/2/sensor/BICshort/activation",
+    "history/2/sensor/BICshort/force_normalized",
+    "history/2/sensor/BICshort/fiber_length_normalized",
+    "history/2/sensor/BICshort/tendon_length_normalized",
+    "history/2/sensor/BICshort/tendon_strain",
+    "history/2/sensor/BICshort/remaining_capacity",
+    "history/2/sensor/BRA/activation",
+    "history/2/sensor/BRA/force_normalized",
+    "history/2/sensor/BRA/fiber_length_normalized",
+    "history/2/sensor/BRA/tendon_length_normalized",
+    "history/2/sensor/BRA/tendon_strain",
+    "history/2/sensor/BRA/remaining_capacity",
+    "history/2/sensor/TRIlong/activation",
+    "history/2/sensor/TRIlong/force_normalized",
+    "history/2/sensor/TRIlong/fiber_length_normalized",
+    "history/2/sensor/TRIlong/tendon_length_normalized",
+    "history/2/sensor/TRIlong/tendon_strain",
+    "history/2/sensor/TRIlong/remaining_capacity",
+    "history/2/sensor/TRIlat/activation",
+    "history/2/sensor/TRIlat/force_normalized",
+    "history/2/sensor/TRIlat/fiber_length_normalized",
+    "history/2/sensor/TRIlat/tendon_length_normalized",
+    "history/2/sensor/TRIlat/tendon_strain",
+    "history/2/sensor/TRIlat/remaining_capacity",
+    "history/2/sensor/TRImed/activation",
+    "history/2/sensor/TRImed/force_normalized",
+    "history/2/sensor/TRImed/fiber_length_normalized",
+    "history/2/sensor/TRImed/tendon_length_normalized",
+    "history/2/sensor/TRImed/tendon_strain",
+    "history/2/sensor/TRImed/remaining_capacity",
+    "history/2/excitation/BIClong",
+    "history/2/excitation/BICshort",
+    "history/2/excitation/BRA",
+    "history/2/excitation/TRIlong",
+    "history/2/excitation/TRIlat",
+    "history/2/excitation/TRImed",
+    "history/2/command/target_angle_centered_rad",
+    "history/2/command/target_velocity_scaled",
+    "history/2/command/requested_target_centered_rad",
+    "history/2/command/trigger",
+    "history/3/sensor/angle_centered_rad",
+    "history/3/sensor/angular_velocity_scaled",
+    "history/3/sensor/payload_mass_kg",
+    "history/3/sensor/BIClong/activation",
+    "history/3/sensor/BIClong/force_normalized",
+    "history/3/sensor/BIClong/fiber_length_normalized",
+    "history/3/sensor/BIClong/tendon_length_normalized",
+    "history/3/sensor/BIClong/tendon_strain",
+    "history/3/sensor/BIClong/remaining_capacity",
+    "history/3/sensor/BICshort/activation",
+    "history/3/sensor/BICshort/force_normalized",
+    "history/3/sensor/BICshort/fiber_length_normalized",
+    "history/3/sensor/BICshort/tendon_length_normalized",
+    "history/3/sensor/BICshort/tendon_strain",
+    "history/3/sensor/BICshort/remaining_capacity",
+    "history/3/sensor/BRA/activation",
+    "history/3/sensor/BRA/force_normalized",
+    "history/3/sensor/BRA/fiber_length_normalized",
+    "history/3/sensor/BRA/tendon_length_normalized",
+    "history/3/sensor/BRA/tendon_strain",
+    "history/3/sensor/BRA/remaining_capacity",
+    "history/3/sensor/TRIlong/activation",
+    "history/3/sensor/TRIlong/force_normalized",
+    "history/3/sensor/TRIlong/fiber_length_normalized",
+    "history/3/sensor/TRIlong/tendon_length_normalized",
+    "history/3/sensor/TRIlong/tendon_strain",
+    "history/3/sensor/TRIlong/remaining_capacity",
+    "history/3/sensor/TRIlat/activation",
+    "history/3/sensor/TRIlat/force_normalized",
+    "history/3/sensor/TRIlat/fiber_length_normalized",
+    "history/3/sensor/TRIlat/tendon_length_normalized",
+    "history/3/sensor/TRIlat/tendon_strain",
+    "history/3/sensor/TRIlat/remaining_capacity",
+    "history/3/sensor/TRImed/activation",
+    "history/3/sensor/TRImed/force_normalized",
+    "history/3/sensor/TRImed/fiber_length_normalized",
+    "history/3/sensor/TRImed/tendon_length_normalized",
+    "history/3/sensor/TRImed/tendon_strain",
+    "history/3/sensor/TRImed/remaining_capacity",
+    "history/3/excitation/BIClong",
+    "history/3/excitation/BICshort",
+    "history/3/excitation/BRA",
+    "history/3/excitation/TRIlong",
+    "history/3/excitation/TRIlat",
+    "history/3/excitation/TRImed",
+    "history/3/command/target_angle_centered_rad",
+    "history/3/command/target_velocity_scaled",
+    "history/3/command/requested_target_centered_rad",
+    "history/3/command/trigger",
+    "history/4/sensor/angle_centered_rad",
+    "history/4/sensor/angular_velocity_scaled",
+    "history/4/sensor/payload_mass_kg",
+    "history/4/sensor/BIClong/activation",
+    "history/4/sensor/BIClong/force_normalized",
+    "history/4/sensor/BIClong/fiber_length_normalized",
+    "history/4/sensor/BIClong/tendon_length_normalized",
+    "history/4/sensor/BIClong/tendon_strain",
+    "history/4/sensor/BIClong/remaining_capacity",
+    "history/4/sensor/BICshort/activation",
+    "history/4/sensor/BICshort/force_normalized",
+    "history/4/sensor/BICshort/fiber_length_normalized",
+    "history/4/sensor/BICshort/tendon_length_normalized",
+    "history/4/sensor/BICshort/tendon_strain",
+    "history/4/sensor/BICshort/remaining_capacity",
+    "history/4/sensor/BRA/activation",
+    "history/4/sensor/BRA/force_normalized",
+    "history/4/sensor/BRA/fiber_length_normalized",
+    "history/4/sensor/BRA/tendon_length_normalized",
+    "history/4/sensor/BRA/tendon_strain",
+    "history/4/sensor/BRA/remaining_capacity",
+    "history/4/sensor/TRIlong/activation",
+    "history/4/sensor/TRIlong/force_normalized",
+    "history/4/sensor/TRIlong/fiber_length_normalized",
+    "history/4/sensor/TRIlong/tendon_length_normalized",
+    "history/4/sensor/TRIlong/tendon_strain",
+    "history/4/sensor/TRIlong/remaining_capacity",
+    "history/4/sensor/TRIlat/activation",
+    "history/4/sensor/TRIlat/force_normalized",
+    "history/4/sensor/TRIlat/fiber_length_normalized",
+    "history/4/sensor/TRIlat/tendon_length_normalized",
+    "history/4/sensor/TRIlat/tendon_strain",
+    "history/4/sensor/TRIlat/remaining_capacity",
+    "history/4/sensor/TRImed/activation",
+    "history/4/sensor/TRImed/force_normalized",
+    "history/4/sensor/TRImed/fiber_length_normalized",
+    "history/4/sensor/TRImed/tendon_length_normalized",
+    "history/4/sensor/TRImed/tendon_strain",
+    "history/4/sensor/TRImed/remaining_capacity",
+    "history/4/excitation/BIClong",
+    "history/4/excitation/BICshort",
+    "history/4/excitation/BRA",
+    "history/4/excitation/TRIlong",
+    "history/4/excitation/TRIlat",
+    "history/4/excitation/TRImed",
+    "history/4/command/target_angle_centered_rad",
+    "history/4/command/target_velocity_scaled",
+    "history/4/command/requested_target_centered_rad",
+    "history/4/command/trigger",
+    "history/5/sensor/angle_centered_rad",
+    "history/5/sensor/angular_velocity_scaled",
+    "history/5/sensor/payload_mass_kg",
+    "history/5/sensor/BIClong/activation",
+    "history/5/sensor/BIClong/force_normalized",
+    "history/5/sensor/BIClong/fiber_length_normalized",
+    "history/5/sensor/BIClong/tendon_length_normalized",
+    "history/5/sensor/BIClong/tendon_strain",
+    "history/5/sensor/BIClong/remaining_capacity",
+    "history/5/sensor/BICshort/activation",
+    "history/5/sensor/BICshort/force_normalized",
+    "history/5/sensor/BICshort/fiber_length_normalized",
+    "history/5/sensor/BICshort/tendon_length_normalized",
+    "history/5/sensor/BICshort/tendon_strain",
+    "history/5/sensor/BICshort/remaining_capacity",
+    "history/5/sensor/BRA/activation",
+    "history/5/sensor/BRA/force_normalized",
+    "history/5/sensor/BRA/fiber_length_normalized",
+    "history/5/sensor/BRA/tendon_length_normalized",
+    "history/5/sensor/BRA/tendon_strain",
+    "history/5/sensor/BRA/remaining_capacity",
+    "history/5/sensor/TRIlong/activation",
+    "history/5/sensor/TRIlong/force_normalized",
+    "history/5/sensor/TRIlong/fiber_length_normalized",
+    "history/5/sensor/TRIlong/tendon_length_normalized",
+    "history/5/sensor/TRIlong/tendon_strain",
+    "history/5/sensor/TRIlong/remaining_capacity",
+    "history/5/sensor/TRIlat/activation",
+    "history/5/sensor/TRIlat/force_normalized",
+    "history/5/sensor/TRIlat/fiber_length_normalized",
+    "history/5/sensor/TRIlat/tendon_length_normalized",
+    "history/5/sensor/TRIlat/tendon_strain",
+    "history/5/sensor/TRIlat/remaining_capacity",
+    "history/5/sensor/TRImed/activation",
+    "history/5/sensor/TRImed/force_normalized",
+    "history/5/sensor/TRImed/fiber_length_normalized",
+    "history/5/sensor/TRImed/tendon_length_normalized",
+    "history/5/sensor/TRImed/tendon_strain",
+    "history/5/sensor/TRImed/remaining_capacity",
+    "history/5/excitation/BIClong",
+    "history/5/excitation/BICshort",
+    "history/5/excitation/BRA",
+    "history/5/excitation/TRIlong",
+    "history/5/excitation/TRIlat",
+    "history/5/excitation/TRImed",
+    "history/5/command/target_angle_centered_rad",
+    "history/5/command/target_velocity_scaled",
+    "history/5/command/requested_target_centered_rad",
+    "history/5/command/trigger",
+    "history/6/sensor/angle_centered_rad",
+    "history/6/sensor/angular_velocity_scaled",
+    "history/6/sensor/payload_mass_kg",
+    "history/6/sensor/BIClong/activation",
+    "history/6/sensor/BIClong/force_normalized",
+    "history/6/sensor/BIClong/fiber_length_normalized",
+    "history/6/sensor/BIClong/tendon_length_normalized",
+    "history/6/sensor/BIClong/tendon_strain",
+    "history/6/sensor/BIClong/remaining_capacity",
+    "history/6/sensor/BICshort/activation",
+    "history/6/sensor/BICshort/force_normalized",
+    "history/6/sensor/BICshort/fiber_length_normalized",
+    "history/6/sensor/BICshort/tendon_length_normalized",
+    "history/6/sensor/BICshort/tendon_strain",
+    "history/6/sensor/BICshort/remaining_capacity",
+    "history/6/sensor/BRA/activation",
+    "history/6/sensor/BRA/force_normalized",
+    "history/6/sensor/BRA/fiber_length_normalized",
+    "history/6/sensor/BRA/tendon_length_normalized",
+    "history/6/sensor/BRA/tendon_strain",
+    "history/6/sensor/BRA/remaining_capacity",
+    "history/6/sensor/TRIlong/activation",
+    "history/6/sensor/TRIlong/force_normalized",
+    "history/6/sensor/TRIlong/fiber_length_normalized",
+    "history/6/sensor/TRIlong/tendon_length_normalized",
+    "history/6/sensor/TRIlong/tendon_strain",
+    "history/6/sensor/TRIlong/remaining_capacity",
+    "history/6/sensor/TRIlat/activation",
+    "history/6/sensor/TRIlat/force_normalized",
+    "history/6/sensor/TRIlat/fiber_length_normalized",
+    "history/6/sensor/TRIlat/tendon_length_normalized",
+    "history/6/sensor/TRIlat/tendon_strain",
+    "history/6/sensor/TRIlat/remaining_capacity",
+    "history/6/sensor/TRImed/activation",
+    "history/6/sensor/TRImed/force_normalized",
+    "history/6/sensor/TRImed/fiber_length_normalized",
+    "history/6/sensor/TRImed/tendon_length_normalized",
+    "history/6/sensor/TRImed/tendon_strain",
+    "history/6/sensor/TRImed/remaining_capacity",
+    "history/6/excitation/BIClong",
+    "history/6/excitation/BICshort",
+    "history/6/excitation/BRA",
+    "history/6/excitation/TRIlong",
+    "history/6/excitation/TRIlat",
+    "history/6/excitation/TRImed",
+    "history/6/command/target_angle_centered_rad",
+    "history/6/command/target_velocity_scaled",
+    "history/6/command/requested_target_centered_rad",
+    "history/6/command/trigger",
+    "history/7/sensor/angle_centered_rad",
+    "history/7/sensor/angular_velocity_scaled",
+    "history/7/sensor/payload_mass_kg",
+    "history/7/sensor/BIClong/activation",
+    "history/7/sensor/BIClong/force_normalized",
+    "history/7/sensor/BIClong/fiber_length_normalized",
+    "history/7/sensor/BIClong/tendon_length_normalized",
+    "history/7/sensor/BIClong/tendon_strain",
+    "history/7/sensor/BIClong/remaining_capacity",
+    "history/7/sensor/BICshort/activation",
+    "history/7/sensor/BICshort/force_normalized",
+    "history/7/sensor/BICshort/fiber_length_normalized",
+    "history/7/sensor/BICshort/tendon_length_normalized",
+    "history/7/sensor/BICshort/tendon_strain",
+    "history/7/sensor/BICshort/remaining_capacity",
+    "history/7/sensor/BRA/activation",
+    "history/7/sensor/BRA/force_normalized",
+    "history/7/sensor/BRA/fiber_length_normalized",
+    "history/7/sensor/BRA/tendon_length_normalized",
+    "history/7/sensor/BRA/tendon_strain",
+    "history/7/sensor/BRA/remaining_capacity",
+    "history/7/sensor/TRIlong/activation",
+    "history/7/sensor/TRIlong/force_normalized",
+    "history/7/sensor/TRIlong/fiber_length_normalized",
+    "history/7/sensor/TRIlong/tendon_length_normalized",
+    "history/7/sensor/TRIlong/tendon_strain",
+    "history/7/sensor/TRIlong/remaining_capacity",
+    "history/7/sensor/TRIlat/activation",
+    "history/7/sensor/TRIlat/force_normalized",
+    "history/7/sensor/TRIlat/fiber_length_normalized",
+    "history/7/sensor/TRIlat/tendon_length_normalized",
+    "history/7/sensor/TRIlat/tendon_strain",
+    "history/7/sensor/TRIlat/remaining_capacity",
+    "history/7/sensor/TRImed/activation",
+    "history/7/sensor/TRImed/force_normalized",
+    "history/7/sensor/TRImed/fiber_length_normalized",
+    "history/7/sensor/TRImed/tendon_length_normalized",
+    "history/7/sensor/TRImed/tendon_strain",
+    "history/7/sensor/TRImed/remaining_capacity",
+    "history/7/excitation/BIClong",
+    "history/7/excitation/BICshort",
+    "history/7/excitation/BRA",
+    "history/7/excitation/TRIlong",
+    "history/7/excitation/TRIlat",
+    "history/7/excitation/TRImed",
+    "history/7/command/target_angle_centered_rad",
+    "history/7/command/target_velocity_scaled",
+    "history/7/command/requested_target_centered_rad",
+    "history/7/command/trigger",
+    "history/8/sensor/angle_centered_rad",
+    "history/8/sensor/angular_velocity_scaled",
+    "history/8/sensor/payload_mass_kg",
+    "history/8/sensor/BIClong/activation",
+    "history/8/sensor/BIClong/force_normalized",
+    "history/8/sensor/BIClong/fiber_length_normalized",
+    "history/8/sensor/BIClong/tendon_length_normalized",
+    "history/8/sensor/BIClong/tendon_strain",
+    "history/8/sensor/BIClong/remaining_capacity",
+    "history/8/sensor/BICshort/activation",
+    "history/8/sensor/BICshort/force_normalized",
+    "history/8/sensor/BICshort/fiber_length_normalized",
+    "history/8/sensor/BICshort/tendon_length_normalized",
+    "history/8/sensor/BICshort/tendon_strain",
+    "history/8/sensor/BICshort/remaining_capacity",
+    "history/8/sensor/BRA/activation",
+    "history/8/sensor/BRA/force_normalized",
+    "history/8/sensor/BRA/fiber_length_normalized",
+    "history/8/sensor/BRA/tendon_length_normalized",
+    "history/8/sensor/BRA/tendon_strain",
+    "history/8/sensor/BRA/remaining_capacity",
+    "history/8/sensor/TRIlong/activation",
+    "history/8/sensor/TRIlong/force_normalized",
+    "history/8/sensor/TRIlong/fiber_length_normalized",
+    "history/8/sensor/TRIlong/tendon_length_normalized",
+    "history/8/sensor/TRIlong/tendon_strain",
+    "history/8/sensor/TRIlong/remaining_capacity",
+    "history/8/sensor/TRIlat/activation",
+    "history/8/sensor/TRIlat/force_normalized",
+    "history/8/sensor/TRIlat/fiber_length_normalized",
+    "history/8/sensor/TRIlat/tendon_length_normalized",
+    "history/8/sensor/TRIlat/tendon_strain",
+    "history/8/sensor/TRIlat/remaining_capacity",
+    "history/8/sensor/TRImed/activation",
+    "history/8/sensor/TRImed/force_normalized",
+    "history/8/sensor/TRImed/fiber_length_normalized",
+    "history/8/sensor/TRImed/tendon_length_normalized",
+    "history/8/sensor/TRImed/tendon_strain",
+    "history/8/sensor/TRImed/remaining_capacity",
+    "history/8/excitation/BIClong",
+    "history/8/excitation/BICshort",
+    "history/8/excitation/BRA",
+    "history/8/excitation/TRIlong",
+    "history/8/excitation/TRIlat",
+    "history/8/excitation/TRImed",
+    "history/8/command/target_angle_centered_rad",
+    "history/8/command/target_velocity_scaled",
+    "history/8/command/requested_target_centered_rad",
+    "history/8/command/trigger",
+    "history/9/sensor/angle_centered_rad",
+    "history/9/sensor/angular_velocity_scaled",
+    "history/9/sensor/payload_mass_kg",
+    "history/9/sensor/BIClong/activation",
+    "history/9/sensor/BIClong/force_normalized",
+    "history/9/sensor/BIClong/fiber_length_normalized",
+    "history/9/sensor/BIClong/tendon_length_normalized",
+    "history/9/sensor/BIClong/tendon_strain",
+    "history/9/sensor/BIClong/remaining_capacity",
+    "history/9/sensor/BICshort/activation",
+    "history/9/sensor/BICshort/force_normalized",
+    "history/9/sensor/BICshort/fiber_length_normalized",
+    "history/9/sensor/BICshort/tendon_length_normalized",
+    "history/9/sensor/BICshort/tendon_strain",
+    "history/9/sensor/BICshort/remaining_capacity",
+    "history/9/sensor/BRA/activation",
+    "history/9/sensor/BRA/force_normalized",
+    "history/9/sensor/BRA/fiber_length_normalized",
+    "history/9/sensor/BRA/tendon_length_normalized",
+    "history/9/sensor/BRA/tendon_strain",
+    "history/9/sensor/BRA/remaining_capacity",
+    "history/9/sensor/TRIlong/activation",
+    "history/9/sensor/TRIlong/force_normalized",
+    "history/9/sensor/TRIlong/fiber_length_normalized",
+    "history/9/sensor/TRIlong/tendon_length_normalized",
+    "history/9/sensor/TRIlong/tendon_strain",
+    "history/9/sensor/TRIlong/remaining_capacity",
+    "history/9/sensor/TRIlat/activation",
+    "history/9/sensor/TRIlat/force_normalized",
+    "history/9/sensor/TRIlat/fiber_length_normalized",
+    "history/9/sensor/TRIlat/tendon_length_normalized",
+    "history/9/sensor/TRIlat/tendon_strain",
+    "history/9/sensor/TRIlat/remaining_capacity",
+    "history/9/sensor/TRImed/activation",
+    "history/9/sensor/TRImed/force_normalized",
+    "history/9/sensor/TRImed/fiber_length_normalized",
+    "history/9/sensor/TRImed/tendon_length_normalized",
+    "history/9/sensor/TRImed/tendon_strain",
+    "history/9/sensor/TRImed/remaining_capacity",
+    "history/9/excitation/BIClong",
+    "history/9/excitation/BICshort",
+    "history/9/excitation/BRA",
+    "history/9/excitation/TRIlong",
+    "history/9/excitation/TRIlat",
+    "history/9/excitation/TRImed",
+    "history/9/command/target_angle_centered_rad",
+    "history/9/command/target_velocity_scaled",
+    "history/9/command/requested_target_centered_rad",
+    "history/9/command/trigger",
+    "history/10/sensor/angle_centered_rad",
+    "history/10/sensor/angular_velocity_scaled",
+    "history/10/sensor/payload_mass_kg",
+    "history/10/sensor/BIClong/activation",
+    "history/10/sensor/BIClong/force_normalized",
+    "history/10/sensor/BIClong/fiber_length_normalized",
+    "history/10/sensor/BIClong/tendon_length_normalized",
+    "history/10/sensor/BIClong/tendon_strain",
+    "history/10/sensor/BIClong/remaining_capacity",
+    "history/10/sensor/BICshort/activation",
+    "history/10/sensor/BICshort/force_normalized",
+    "history/10/sensor/BICshort/fiber_length_normalized",
+    "history/10/sensor/BICshort/tendon_length_normalized",
+    "history/10/sensor/BICshort/tendon_strain",
+    "history/10/sensor/BICshort/remaining_capacity",
+    "history/10/sensor/BRA/activation",
+    "history/10/sensor/BRA/force_normalized",
+    "history/10/sensor/BRA/fiber_length_normalized",
+    "history/10/sensor/BRA/tendon_length_normalized",
+    "history/10/sensor/BRA/tendon_strain",
+    "history/10/sensor/BRA/remaining_capacity",
+    "history/10/sensor/TRIlong/activation",
+    "history/10/sensor/TRIlong/force_normalized",
+    "history/10/sensor/TRIlong/fiber_length_normalized",
+    "history/10/sensor/TRIlong/tendon_length_normalized",
+    "history/10/sensor/TRIlong/tendon_strain",
+    "history/10/sensor/TRIlong/remaining_capacity",
+    "history/10/sensor/TRIlat/activation",
+    "history/10/sensor/TRIlat/force_normalized",
+    "history/10/sensor/TRIlat/fiber_length_normalized",
+    "history/10/sensor/TRIlat/tendon_length_normalized",
+    "history/10/sensor/TRIlat/tendon_strain",
+    "history/10/sensor/TRIlat/remaining_capacity",
+    "history/10/sensor/TRImed/activation",
+    "history/10/sensor/TRImed/force_normalized",
+    "history/10/sensor/TRImed/fiber_length_normalized",
+    "history/10/sensor/TRImed/tendon_length_normalized",
+    "history/10/sensor/TRImed/tendon_strain",
+    "history/10/sensor/TRImed/remaining_capacity",
+    "history/10/excitation/BIClong",
+    "history/10/excitation/BICshort",
+    "history/10/excitation/BRA",
+    "history/10/excitation/TRIlong",
+    "history/10/excitation/TRIlat",
+    "history/10/excitation/TRImed",
+    "history/10/command/target_angle_centered_rad",
+    "history/10/command/target_velocity_scaled",
+    "history/10/command/requested_target_centered_rad",
+    "history/10/command/trigger",
+    "BIClong/pending_excitation/0",
+    "BIClong/pending_excitation/1",
+    "BIClong/pending_excitation/2",
+    "BIClong/pending_excitation/3",
+    "BIClong/pending_excitation/4",
+    "BIClong/pending_excitation/5",
+    "BIClong/pending_excitation/6",
+    "BIClong/pending_excitation/7",
+    "BIClong/pending_excitation/8",
+    "BIClong/pending_excitation/9",
+    "BIClong/pending_excitation/10",
+    "BIClong/pending_excitation/11",
+    "BIClong/pending_excitation/12",
+    "BIClong/pending_excitation/13",
+    "BIClong/pending_excitation/14",
+    "BIClong/pending_excitation/15",
+    "BIClong/pending_excitation/16",
+    "BIClong/pending_excitation/17",
+    "BIClong/pending_excitation/18",
+    "BIClong/pending_excitation/19",
+    "BIClong/pending_excitation/20",
+    "BIClong/pending_excitation/21",
+    "BIClong/pending_excitation/22",
+    "BIClong/pending_excitation/23",
+    "BIClong/pending_excitation/24",
+    "BIClong/pending_excitation/25",
+    "BIClong/pending_excitation/26",
+    "BIClong/pending_excitation/27",
+    "BIClong/pending_excitation/28",
+    "BIClong/pending_excitation/29",
+    "BIClong/pending_excitation/30",
+    "BIClong/pending_excitation/31",
+    "BIClong/pending_excitation/32",
+    "BIClong/pending_excitation/33",
+    "BIClong/pending_excitation/34",
+    "BIClong/pending_excitation/35",
+    "BIClong/pending_excitation/36",
+    "BIClong/pending_excitation/37",
+    "BIClong/pending_excitation/38",
+    "BIClong/pending_excitation/39",
+    "BICshort/pending_excitation/0",
+    "BICshort/pending_excitation/1",
+    "BICshort/pending_excitation/2",
+    "BICshort/pending_excitation/3",
+    "BICshort/pending_excitation/4",
+    "BICshort/pending_excitation/5",
+    "BICshort/pending_excitation/6",
+    "BICshort/pending_excitation/7",
+    "BICshort/pending_excitation/8",
+    "BICshort/pending_excitation/9",
+    "BICshort/pending_excitation/10",
+    "BICshort/pending_excitation/11",
+    "BICshort/pending_excitation/12",
+    "BICshort/pending_excitation/13",
+    "BICshort/pending_excitation/14",
+    "BICshort/pending_excitation/15",
+    "BICshort/pending_excitation/16",
+    "BICshort/pending_excitation/17",
+    "BICshort/pending_excitation/18",
+    "BICshort/pending_excitation/19",
+    "BICshort/pending_excitation/20",
+    "BICshort/pending_excitation/21",
+    "BICshort/pending_excitation/22",
+    "BICshort/pending_excitation/23",
+    "BICshort/pending_excitation/24",
+    "BICshort/pending_excitation/25",
+    "BICshort/pending_excitation/26",
+    "BICshort/pending_excitation/27",
+    "BICshort/pending_excitation/28",
+    "BICshort/pending_excitation/29",
+    "BICshort/pending_excitation/30",
+    "BICshort/pending_excitation/31",
+    "BICshort/pending_excitation/32",
+    "BICshort/pending_excitation/33",
+    "BICshort/pending_excitation/34",
+    "BICshort/pending_excitation/35",
+    "BICshort/pending_excitation/36",
+    "BICshort/pending_excitation/37",
+    "BICshort/pending_excitation/38",
+    "BICshort/pending_excitation/39",
+    "BRA/pending_excitation/0",
+    "BRA/pending_excitation/1",
+    "BRA/pending_excitation/2",
+    "BRA/pending_excitation/3",
+    "BRA/pending_excitation/4",
+    "BRA/pending_excitation/5",
+    "BRA/pending_excitation/6",
+    "BRA/pending_excitation/7",
+    "BRA/pending_excitation/8",
+    "BRA/pending_excitation/9",
+    "BRA/pending_excitation/10",
+    "BRA/pending_excitation/11",
+    "BRA/pending_excitation/12",
+    "BRA/pending_excitation/13",
+    "BRA/pending_excitation/14",
+    "BRA/pending_excitation/15",
+    "BRA/pending_excitation/16",
+    "BRA/pending_excitation/17",
+    "BRA/pending_excitation/18",
+    "BRA/pending_excitation/19",
+    "BRA/pending_excitation/20",
+    "BRA/pending_excitation/21",
+    "BRA/pending_excitation/22",
+    "BRA/pending_excitation/23",
+    "BRA/pending_excitation/24",
+    "BRA/pending_excitation/25",
+    "BRA/pending_excitation/26",
+    "BRA/pending_excitation/27",
+    "BRA/pending_excitation/28",
+    "BRA/pending_excitation/29",
+    "BRA/pending_excitation/30",
+    "BRA/pending_excitation/31",
+    "BRA/pending_excitation/32",
+    "BRA/pending_excitation/33",
+    "BRA/pending_excitation/34",
+    "BRA/pending_excitation/35",
+    "BRA/pending_excitation/36",
+    "BRA/pending_excitation/37",
+    "BRA/pending_excitation/38",
+    "BRA/pending_excitation/39",
+    "TRIlong/pending_excitation/0",
+    "TRIlong/pending_excitation/1",
+    "TRIlong/pending_excitation/2",
+    "TRIlong/pending_excitation/3",
+    "TRIlong/pending_excitation/4",
+    "TRIlong/pending_excitation/5",
+    "TRIlong/pending_excitation/6",
+    "TRIlong/pending_excitation/7",
+    "TRIlong/pending_excitation/8",
+    "TRIlong/pending_excitation/9",
+    "TRIlong/pending_excitation/10",
+    "TRIlong/pending_excitation/11",
+    "TRIlong/pending_excitation/12",
+    "TRIlong/pending_excitation/13",
+    "TRIlong/pending_excitation/14",
+    "TRIlong/pending_excitation/15",
+    "TRIlong/pending_excitation/16",
+    "TRIlong/pending_excitation/17",
+    "TRIlong/pending_excitation/18",
+    "TRIlong/pending_excitation/19",
+    "TRIlong/pending_excitation/20",
+    "TRIlong/pending_excitation/21",
+    "TRIlong/pending_excitation/22",
+    "TRIlong/pending_excitation/23",
+    "TRIlong/pending_excitation/24",
+    "TRIlong/pending_excitation/25",
+    "TRIlong/pending_excitation/26",
+    "TRIlong/pending_excitation/27",
+    "TRIlong/pending_excitation/28",
+    "TRIlong/pending_excitation/29",
+    "TRIlong/pending_excitation/30",
+    "TRIlong/pending_excitation/31",
+    "TRIlong/pending_excitation/32",
+    "TRIlong/pending_excitation/33",
+    "TRIlong/pending_excitation/34",
+    "TRIlong/pending_excitation/35",
+    "TRIlong/pending_excitation/36",
+    "TRIlong/pending_excitation/37",
+    "TRIlong/pending_excitation/38",
+    "TRIlong/pending_excitation/39",
+    "TRIlat/pending_excitation/0",
+    "TRIlat/pending_excitation/1",
+    "TRIlat/pending_excitation/2",
+    "TRIlat/pending_excitation/3",
+    "TRIlat/pending_excitation/4",
+    "TRIlat/pending_excitation/5",
+    "TRIlat/pending_excitation/6",
+    "TRIlat/pending_excitation/7",
+    "TRIlat/pending_excitation/8",
+    "TRIlat/pending_excitation/9",
+    "TRIlat/pending_excitation/10",
+    "TRIlat/pending_excitation/11",
+    "TRIlat/pending_excitation/12",
+    "TRIlat/pending_excitation/13",
+    "TRIlat/pending_excitation/14",
+    "TRIlat/pending_excitation/15",
+    "TRIlat/pending_excitation/16",
+    "TRIlat/pending_excitation/17",
+    "TRIlat/pending_excitation/18",
+    "TRIlat/pending_excitation/19",
+    "TRIlat/pending_excitation/20",
+    "TRIlat/pending_excitation/21",
+    "TRIlat/pending_excitation/22",
+    "TRIlat/pending_excitation/23",
+    "TRIlat/pending_excitation/24",
+    "TRIlat/pending_excitation/25",
+    "TRIlat/pending_excitation/26",
+    "TRIlat/pending_excitation/27",
+    "TRIlat/pending_excitation/28",
+    "TRIlat/pending_excitation/29",
+    "TRIlat/pending_excitation/30",
+    "TRIlat/pending_excitation/31",
+    "TRIlat/pending_excitation/32",
+    "TRIlat/pending_excitation/33",
+    "TRIlat/pending_excitation/34",
+    "TRIlat/pending_excitation/35",
+    "TRIlat/pending_excitation/36",
+    "TRIlat/pending_excitation/37",
+    "TRIlat/pending_excitation/38",
+    "TRIlat/pending_excitation/39",
+    "TRImed/pending_excitation/0",
+    "TRImed/pending_excitation/1",
+    "TRImed/pending_excitation/2",
+    "TRImed/pending_excitation/3",
+    "TRImed/pending_excitation/4",
+    "TRImed/pending_excitation/5",
+    "TRImed/pending_excitation/6",
+    "TRImed/pending_excitation/7",
+    "TRImed/pending_excitation/8",
+    "TRImed/pending_excitation/9",
+    "TRImed/pending_excitation/10",
+    "TRImed/pending_excitation/11",
+    "TRImed/pending_excitation/12",
+    "TRImed/pending_excitation/13",
+    "TRImed/pending_excitation/14",
+    "TRImed/pending_excitation/15",
+    "TRImed/pending_excitation/16",
+    "TRImed/pending_excitation/17",
+    "TRImed/pending_excitation/18",
+    "TRImed/pending_excitation/19",
+    "TRImed/pending_excitation/20",
+    "TRImed/pending_excitation/21",
+    "TRImed/pending_excitation/22",
+    "TRImed/pending_excitation/23",
+    "TRImed/pending_excitation/24",
+    "TRImed/pending_excitation/25",
+    "TRImed/pending_excitation/26",
+    "TRImed/pending_excitation/27",
+    "TRImed/pending_excitation/28",
+    "TRImed/pending_excitation/29",
+    "TRImed/pending_excitation/30",
+    "TRImed/pending_excitation/31",
+    "TRImed/pending_excitation/32",
+    "TRImed/pending_excitation/33",
+    "TRImed/pending_excitation/34",
+    "TRImed/pending_excitation/35",
+    "TRImed/pending_excitation/36",
+    "TRImed/pending_excitation/37",
+    "TRImed/pending_excitation/38",
+    "TRImed/pending_excitation/39"
+  ],
+  "predictor_path": null,
+  "predictor_sha256": null,
+  "package_versions": {
+    "mujoco": "3.17.0",
+    "gymnasium": "1.4.0",
+    "numpy": "2.5.4",
+    "stable-baselines3": "2.9.2",
+    "torch": "2.15.0+cpu"
+  },
+  "source": "Local CPU actor with independent delayed muscle excitations",
+  "limitations": "Experimental 1-DOF controller; training budget is not proof of tracking or protection."
+}

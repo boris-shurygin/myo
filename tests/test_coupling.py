@@ -36,8 +36,8 @@ def _rollout(physics_dt, mode):
     last_path_velocities = np.zeros(4)
 
     # Capture the actual kinematics supplied to the last fiber substep.
-    # Final telemetry q is after mj_step2; its forces were computed before
-    # that rigid-body update. Comparing F against L(q_new) would be incorrect.
+    # The applied force belongs to this geometry; end-pose telemetry is a
+    # separate sample, without a second update of fiber or activation state.
     for index, muscle in enumerate(env.muscles):
         original_step = muscle.step
 
@@ -49,7 +49,7 @@ def _rollout(physics_dt, mode):
 
         muscle.step = capture
 
-    trace = {key: [] for key in ("t", "q", "qvel", "force", "activation", "capacity", "delayed")}
+    trace = {key: [] for key in ("t", "q", "qvel", "force", "applied_force", "activation", "capacity", "delayed")}
     maximum_geometry_offset = 0.0
     try:
         _, initial = env.reset(seed=31, options=RESET_OPTIONS)
@@ -66,20 +66,27 @@ def _rollout(physics_dt, mode):
             outputs = env._muscle_outputs
             lengths_from_outputs = np.array([o.fiber_length + o.tendon_length for o in outputs])
             np.testing.assert_allclose(lengths_from_outputs, last_path_lengths, atol=1e-14, rtol=0)
+            np.testing.assert_allclose(
+                np.asarray(info["fiber_length_m"]) + np.asarray(info["tendon_length_m"]),
+                env.muscle_lengths(), atol=1e-14, rtol=0,
+            )
+            np.testing.assert_array_equal(
+                info["applied_tendon_force_N"], [o.tendon_force for o in outputs]
+            )
 
             # Virtual work: MT shortening power must have the same sign and
             # magnitude as the torque delivered to the joint, at the same time.
             joint_velocities = -last_path_velocities / env.moment_arms
             np.testing.assert_allclose(joint_velocities, joint_velocities[0], atol=1e-12, rtol=0)
             assert sum(o.mt_power for o in outputs) == pytest.approx(
-                info["muscle_torque_Nm"] * joint_velocities[0], abs=1e-10
+                info["applied_muscle_torque_Nm"] * joint_velocities[0], abs=1e-10
             )
             energies_and_dissipation = np.array([
                 [o.tendon_energy, o.passive_energy, o.damping_power] for o in outputs
             ])
             assert np.isfinite(energies_and_dissipation).all()
             assert (energies_and_dissipation >= 0).all()
-            assert max(abs(value) for value in info["equilibrium_residual_N"]) < 1e-6
+            assert max(abs(value) for value in info["applied_equilibrium_residual_N"]) < 1e-6
 
             maximum_geometry_offset = max(
                 maximum_geometry_offset,
@@ -88,6 +95,7 @@ def _rollout(physics_dt, mode):
             for key, info_key in (
                 ("t", "t"), ("q", "q"), ("qvel", "qvel"),
                 ("force", "tendon_force_N"), ("activation", "activation"),
+                ("applied_force", "applied_tendon_force_N"),
                 ("capacity", "capacity"), ("delayed", "delayed_excitation"),
             ):
                 trace[key].append(info[info_key])
@@ -108,9 +116,13 @@ def _check_pair(coarse_result, fine_result):
     # numerical differences. These are not physiological accuracy thresholds.
     np.testing.assert_allclose(coarse["q"], fine["q"], atol=0.003, rtol=0)
     np.testing.assert_allclose(coarse["qvel"], fine["qvel"], atol=0.02, rtol=0)
-    np.testing.assert_allclose(coarse["force"], fine["force"], atol=0.5, rtol=0)
+    np.testing.assert_allclose(coarse["applied_force"], fine["applied_force"], atol=0.5, rtol=0)
+    # End-pose tension additionally sees the body's displacement since the
+    # fiber solve. The 1/0.5/0.25 ms experiment measured maximum differences
+    # 1.43/0.72 N, while applied-force differences were 0.14/0.07 N.
+    np.testing.assert_allclose(coarse["force"], fine["force"], atol=2.0, rtol=0)
     np.testing.assert_allclose(coarse["capacity"], fine["capacity"], atol=1e-4, rtol=0)
-    # The old-length/new-q telemetry offset should shrink with the split step.
+    # The applied-force geometry lag should shrink with the split step.
     assert fine_offset <= 0.7 * coarse_offset + 1e-8
     return coarse, fine
 

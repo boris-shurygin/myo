@@ -55,7 +55,9 @@ def test_external_tendon_forces_produce_the_documented_elbow_torque():
         expected = float(env.moment_arms @ np.asarray(info["tendon_force_N"]))
         assert expected > 0
         assert info["muscle_torque_Nm"] == pytest.approx(expected)
-        assert env.data.qfrc_applied[env.dof_index] == pytest.approx(expected)
+        assert env.data.qfrc_applied[env.dof_index] == pytest.approx(info["applied_muscle_torque_Nm"])
+        assert info["applied_muscle_torque_Nm"] == pytest.approx(
+            env.moment_arms @ np.asarray(info["applied_tendon_force_N"]))
         assert max(info["tendon_strain"]) > 0
         assert max(info["activation"]) > 0
     finally:
