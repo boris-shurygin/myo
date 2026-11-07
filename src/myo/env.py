@@ -57,6 +57,10 @@ class PreacherCurlConfig:
     render_height: int = 720
     geometry: str = "toy"
     asset_dir: str = "data/myoarm"
+    arm_mount_tilt: float = float(np.deg2rad(30.0))  # MyoArm: rotation from vertical-down, radians.
+    # MuJoCo contact proxies, not measured tissue material constants.
+    tissue_contact_time_constant: float = 0.03  # s; larger means softer response.
+    tissue_contact_transition_depth: float = 0.015  # m; depth over which impedance increases.
     task_mode: str = "reference"
     history_steps: int = 10
     target_max_speed: float = 1.0
@@ -85,7 +89,7 @@ class PreacherCurlConfig:
             self.recovery_rate, self.rom_margin, self.joint_load_force_threshold,
             self.fiber_stretch_threshold, self.tendon_strain_threshold,
             self.rom_cost_weight, self.joint_load_cost_weight,
-            self.fiber_stretch_cost_weight, self.tendon_stretch_cost_weight,
+            self.fiber_stretch_cost_weight, self.tendon_stretch_cost_weight, self.arm_mount_tilt,
         )
         if not all(np.isfinite(v) for v in finite_fields):
             raise ValueError("Environment settings must be finite.")
@@ -108,6 +112,12 @@ class PreacherCurlConfig:
             raise ValueError("Engineering proxy cost weights must be nonnegative.")
         if self.geometry not in ("toy", "myoarm") or self.task_mode not in ("reference", "interactive", "curriculum"):
             raise ValueError("Unknown geometry or task_mode.")
+        if not all(np.isfinite(x) and x > 0 for x in (
+            self.tissue_contact_time_constant, self.tissue_contact_transition_depth,
+        )):
+            raise ValueError("Tissue contact time constant and transition depth must be finite and positive.")
+        if self.geometry == "myoarm" and self.tissue_contact_time_constant < 2 * self.physics_dt:
+            raise ValueError("Tissue contact time constant must be at least two physics timesteps.")
         if self.history_steps < 0 or int(self.history_steps) != self.history_steps:
             raise ValueError("history_steps must be a nonnegative integer.")
         positive = (self.target_max_speed, self.target_max_acceleration,
@@ -161,7 +171,10 @@ class PreacherCurlEnv(gym.Env[np.ndarray, np.ndarray]):
         if self.config.geometry == "myoarm":
             from myo.geometry import MyoArmGeometry
             self.geometry = MyoArmGeometry(self.config.asset_dir, physics_dt=self.config.physics_dt,
-                                          payload_mass=self.config.payload_mass)
+                                          payload_mass=self.config.payload_mass,
+                                          arm_mount_tilt=self.config.arm_mount_tilt,
+                                          tissue_contact_time_constant=self.config.tissue_contact_time_constant,
+                                          tissue_contact_transition_depth=self.config.tissue_contact_transition_depth)
             self.model = self.geometry.model
             self.muscle_names = self.geometry.muscle_names
         else:
@@ -447,7 +460,9 @@ class PreacherCurlEnv(gym.Env[np.ndarray, np.ndarray]):
             self._command_history.append(self._command_values())
         self._step_peaks = {"tendon_force_N": 0.0, "tendon_strain": 0.0,
                             "summed_tendon_force_N": 0.0, "passive_limit_torque_Nm": 0.0,
-                            "outward_limit_velocity_rad_s": 0.0, "joint_limit_reaction_Nm": 0.0}
+                            "outward_limit_velocity_rad_s": 0.0, "joint_limit_reaction_Nm": 0.0,
+                            "tissue_contact_force_N": 0.0, "tissue_contact_penetration_m": 0.0,
+                            "tissue_contact_torque_Nm": 0.0}
         peak_risks = {name: 0.0 for name in self._risk_proxies()}
         for _ in range(self.config.frame_skip):
             # Single-step integrator: current kinematics, external muscle
@@ -477,10 +492,10 @@ class PreacherCurlEnv(gym.Env[np.ndarray, np.ndarray]):
                 peak_risks[key] = max(peak_risks[key], value)
             self._record_peaks()
             mujoco.mj_step2(self.model, self.data)
-            self._step_peaks["joint_limit_reaction_Nm"] = max(
-                self._step_peaks["joint_limit_reaction_Nm"], abs(float(self.data.qfrc_constraint[self.dof_index])))
+            self._record_constraint_peaks()
         # Make paths, body poses and surface inputs agree with the final q.
         mujoco.mj_forward(self.model, self.data)
+        self._record_constraint_peaks()
         if self.geometry:
             self.moment_arms = self.geometry.moment_arms(self.data)
         endpoint_outputs = self._state_outputs()
@@ -629,6 +644,51 @@ class PreacherCurlEnv(gym.Env[np.ndarray, np.ndarray]):
         for key, value in values.items():
             self._step_peaks[key] = max(self._step_peaks[key], float(value))
 
+    def _constraint_torque(self, constraint_types: tuple[int, ...]) -> float:
+        """Project selected solver reactions; contact is not a joint limit."""
+        if not self.data.nefc:
+            return 0.0
+        force = np.where(np.isin(self.data.efc_type, constraint_types), self.data.efc_force, 0.0)
+        torque = np.zeros(self.model.nv)
+        mujoco.mj_mulJacTVec(self.model, self.data, torque, force)
+        return float(torque[self.dof_index])
+
+    def tissue_contact_metrics(self) -> dict[str, float | int]:
+        """Static-envelope contact proxy, separate from tendon and joint reactions."""
+        metrics = {"count": 0, "normal_force_N": 0.0,
+                   "max_penetration_m": 0.0, "torque_Nm": 0.0}
+        if self.geometry is None or not self.data.ncon:
+            return metrics
+        envelope_ids = self.geometry.contact_geom_ids
+        wrench = np.zeros(6)
+        for index in range(self.data.ncon):
+            contact = self.data.contact[index]
+            if contact.geom1 not in envelope_ids or contact.geom2 not in envelope_ids:
+                continue
+            metrics["count"] += 1
+            mujoco.mj_contactForce(self.model, self.data, index, wrench)
+            metrics["normal_force_N"] += max(0.0, float(wrench[0]))
+            metrics["max_penetration_m"] = max(metrics["max_penetration_m"], -float(contact.dist))
+        # Only the explicit tissue pair can collide in this model.
+        if metrics["count"]:
+            metrics["torque_Nm"] = self._constraint_torque((
+                mujoco.mjtConstraint.mjCNSTR_CONTACT_FRICTIONLESS,
+                mujoco.mjtConstraint.mjCNSTR_CONTACT_PYRAMIDAL,
+                mujoco.mjtConstraint.mjCNSTR_CONTACT_ELLIPTIC,
+            ))
+        return metrics
+
+    def _record_constraint_peaks(self) -> None:
+        contact = self.tissue_contact_metrics()
+        values = {
+            "joint_limit_reaction_Nm": abs(self._constraint_torque((mujoco.mjtConstraint.mjCNSTR_LIMIT_JOINT,))),
+            "tissue_contact_force_N": contact["normal_force_N"],
+            "tissue_contact_penetration_m": contact["max_penetration_m"],
+            "tissue_contact_torque_Nm": abs(contact["torque_Nm"]),
+        }
+        for key, value in values.items():
+            self._step_peaks[key] = max(self._step_peaks[key], float(value))
+
     def _risk_proxies(self, outputs=None) -> dict[str, float]:
         """Dimensionless engineering penalties; none estimates human pain.
 
@@ -672,6 +732,8 @@ class PreacherCurlEnv(gym.Env[np.ndarray, np.ndarray]):
             "command_source": ("reference" if self.config.task_mode == "reference" else
                                "manual" if self._manual_command else "curriculum"),
             "payload_mass_kg": self.payload_mass,
+            "arm_mount_tilt_rad": self.config.arm_mount_tilt if self.geometry else None,
+            "tissue_contact": self.tissue_contact_metrics(),
             "tracking_error": [q - target_q, qvel - target_qvel],
             "muscle_names": list(self.muscle_names),
             "excitation": self._previous_excitation.tolist(),

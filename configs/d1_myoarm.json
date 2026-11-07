@@ -20,5 +20,7 @@
   "rom_cost_weight": 0.1,
   "joint_load_cost_weight": 0.1,
   "fiber_stretch_cost_weight": 0.1,
-  "tendon_stretch_cost_weight": 0.1
+  "tendon_stretch_cost_weight": 0.1,
+  "tissue_contact_time_constant": 0.03,
+  "tissue_contact_transition_depth": 0.015
 }

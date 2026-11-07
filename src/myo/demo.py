@@ -44,7 +44,7 @@ def legend_images(color_mode: str, left: int = 0, bottom: int = 0):
 
 def text_overlays(
     env, paused: bool = False, color_mode: str = "tissue", selected_muscle: int = 0,
-    stop_reason: str | None = None,
+    stop_reason: str | None = None, show_contacts: bool = False,
 ) -> list[tuple[int, int, str, str]]:
     """Display each signal separately; percentages never stand in for force."""
     state = env.telemetry()
@@ -55,6 +55,17 @@ def text_overlays(
     target = np.rad2deg(state["target_q"])
     task = getattr(env.config, "task_mode", "reference")
     geometry = getattr(env.config, "geometry", "toy")
+    contact = state.get("tissue_contact")
+    contact_text = ""
+    if contact is not None and geometry == "myoarm":
+        contact_text = (
+            f"\nMount {np.rad2deg(env.config.arm_mount_tilt):.0f} deg"
+            f" | Tissue contact {contact['normal_force_N']:.1f} N"
+            f"\nCompression {1000 * contact['max_penetration_m']:.1f} mm"
+            f" | n={contact['count']}"
+        )
+        if show_contacts:
+            contact_text += "\nContact volume proxies"
     labels = (f"{muscle.params.name} [{index + 1}/{len(env.muscles)}]"
               "\nExcitation\nDelayed excitation\nActivation\nTendon force"
               "\nTendon strain\nFiber length\nTendon length\nCapacity proxy")
@@ -74,6 +85,7 @@ def text_overlays(
          f"{status} | {geometry}\nElbow {angle:.0f} deg | Load {state['payload_mass_kg']:g} kg"
          f"\nTarget {target:.0f} deg | Requested {requested:.0f} deg"
          f"\nTrigger {100 * state.get('trigger', 1.0):.0f}% | {state.get('command_source', task)}"
+         + contact_text
          + ("\nMuscle path reversal: outside source anatomy range" if state.get("path_direction_reversal") else "")
          + (f"\n{stop_reason} | R to reset" if stop_reason else ""), ""),
         (mujoco.mjtFont.mjFONT_NORMAL, mujoco.mjtGridPos.mjGRID_TOPRIGHT, labels, values),
@@ -81,6 +93,7 @@ def text_overlays(
          COLOR_LABELS[color_mode], ""),
         (mujoco.mjtFont.mjFONT_NORMAL, mujoco.mjtGridPos.mjGRID_BOTTOMRIGHT,
          command_help + "1 tissues | 2 activation | 3 force | 4 strain\nM muscle | "
+         f"C envelopes {'on' if show_contacts else 'off'}\n"
          "Space pause | R restart | F fit\nMouse rotate/zoom | Esc close", ""),
     ]
 
@@ -106,6 +119,7 @@ class DemoViewer:
         self.stop_reason = None
         self.color_mode = color_mode
         self.selected_muscle = selected_muscle % len(env.muscles)
+        self.show_contacts = False
         self._path_scene = mujoco.MjvScene(self.model, maxgeom=512)
         self.handle = viewer.launch_passive(
             self.model, self.data, key_callback=self._keys.put,
@@ -143,6 +157,8 @@ class DemoViewer:
                 self.color_mode = COLOR_MODES[key - ord("1")]
             elif key in (ord("M"), ord("m")):
                 self.selected_muscle = (self.selected_muscle + 1) % len(self.env.muscles)
+            elif key in (ord("C"), ord("c")):
+                self.show_contacts = not self.show_contacts
             elif getattr(self.env.config, "task_mode", "reference") != "reference" and key in (
                 264, 265, ord("+"), ord("="), 334, ord("-"), 333, ord("0"),
             ):
@@ -171,7 +187,7 @@ class DemoViewer:
         with self.handle.lock():
             mujoco.mj_copyData(self.data, self.model, self.env.data)
             mujoco.mj_forward(self.model, self.data)
-            configure_options(self.handle.opt, self.model)
+            configure_options(self.handle.opt, self.model, show_contacts=self.show_contacts)
             self.handle.user_scn.ngeom = 0
             append_arm_geometry(
                 self.handle.user_scn, self.env, self.color_mode, kinematic_data=self.data,
@@ -179,6 +195,7 @@ class DemoViewer:
             )
         self.handle.set_texts(text_overlays(
             self.env, self.paused, self.color_mode, self.selected_muscle, self.stop_reason,
+            self.show_contacts,
         ))
         viewport = self.handle.viewport
         if viewport is not None and viewport.width >= 260 and viewport.height >= 160:
@@ -195,7 +212,7 @@ class DemoViewer:
 
 def render_frame(
     env, width: int = 960, height: int = 720, *,
-    color_mode: str = "tissue", selected_muscle: int = 0,
+    color_mode: str = "tissue", selected_muscle: int = 0, show_contacts: bool = False,
 ) -> np.ndarray:
     """Render the same scene/legend offscreen for visual QA (MUJOCO_GL=egl)."""
     model = copy.copy(env.model)
@@ -206,7 +223,7 @@ def render_frame(
     model.vis.global_.offheight = height
     camera, options = mujoco.MjvCamera(), mujoco.MjvOption()
     configure_camera(model, camera)
-    configure_options(options, model)
+    configure_options(options, model, show_contacts=show_contacts)
     scene = mujoco.MjvScene(model, maxgeom=2048)
     gl = mujoco.GLContext(width, height)
     context = None
@@ -220,6 +237,7 @@ def render_frame(
         mujoco.mjr_render(viewport, scene, context)
         for font, position, text, values in text_overlays(
             env, color_mode=color_mode, selected_muscle=selected_muscle,
+            show_contacts=show_contacts,
         ):
             mujoco.mjr_overlay(font, position, viewport, text, values, context)
         if width >= 260 and height >= 160:

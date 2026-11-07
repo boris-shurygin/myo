@@ -56,7 +56,7 @@ def main() -> None:
     with ThreadPoolExecutor(max_workers=4) as executor:
         manifest["files"] = list(executor.map(
             lambda entry: fetch(entry[0], args.output, entry[1]), SOURCE_BLOBS.items()))
-    prepare_model(args.output)
+    manifest["tissue_contact_profiles"] = prepare_model(args.output)
     for path in ("model.xml", "muscles.json"):
         manifest.setdefault("derived", []).append({
             "path": path, "sha256": hashlib.sha256((args.output / path).read_bytes()).hexdigest()})
@@ -66,6 +66,10 @@ def main() -> None:
         "All native actuators removed; external delayed series-elastic force path only",
         "Fixed world mounting, elbow lower limit 15 degrees with no upper limit, hand-fixed payload, camera",
         "Noncontact bone rendering; no skin or volumetric muscle surface created",
+        "Two massless fixed convex tissue profiles, built from landmark-indexed elliptical sections; source inertials preserved",
+        "Upper-arm belly and elbow taper, proximal forearm bulk and wrist taper; shared hinge excluded from envelopes",
+        "One normal contact pair with nonlinear impedance and configurable softness; no overlapping internal contact geoms",
+        "Tissue envelopes and contact solver softness are engineering proxies, not anatomical calibration",
     ]
     staged_manifest = args.output / "manifest.json.tmp"
     staged_manifest.write_text(json.dumps(manifest, indent=2) + "\n")

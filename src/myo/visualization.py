@@ -245,16 +245,48 @@ def sample_muscle_path(path: SchematicMusclePath, parameters: np.ndarray) -> np.
 
 
 def configure_camera(model: mujoco.MjModel, camera: mujoco.MjvCamera) -> None:
-    """Set a free camera; native skeletons use their actual elbow position."""
+    """Frame the arm's working range, independent of its world mount tilt."""
     camera.type = mujoco.mjtCamera.mjCAMERA_FREE
     camera.fixedcamid = -1
     camera.trackbodyid = -1
     if model.ntendon:
         data = mujoco.MjData(model)
-        mujoco.mj_forward(model, data)
         elbow_id = model.joint("elbow").id
-        camera.lookat[:] = data.xanchor[elbow_id] + np.array((0.10, 0.0, 0.03))
-        camera.distance = 1.25
+        arm_bodies = {model.body("humerus_r").id}
+        for body in range(model.nbody):
+            if int(model.body_parentid[body]) in arm_bodies:
+                arm_bodies.add(body)
+        # Native mesh bounds avoid centering on wrap helpers or a large
+        # clavicle/scapula. Only private forward kinematics are evaluated.
+        bounds = []
+        for geom in range(model.ngeom):
+            if int(model.geom_bodyid[geom]) not in arm_bodies:
+                continue
+            if model.geom_type[geom] == mujoco.mjtGeom.mjGEOM_MESH:
+                mesh = int(model.geom_dataid[geom])
+                start, count = model.mesh_vertadr[mesh], model.mesh_vertnum[mesh]
+                vertices = model.mesh_vert[start:start + count]
+                low, high = vertices.min(axis=0), vertices.max(axis=0)
+            elif geom == model.geom("payload").id:
+                low, high = -model.geom_size[geom, 0] * np.ones(3), model.geom_size[geom, 0] * np.ones(3)
+            else:
+                continue
+            corners = np.array([
+                (x, y, z) for x in (low[0], high[0])
+                for y in (low[1], high[1]) for z in (low[2], high[2])
+            ])
+            bounds.append((geom, corners))
+        points = []
+        for angle in np.deg2rad((15.0, 75.0, 150.0)):
+            data.qpos[model.jnt_qposadr[elbow_id]] = angle
+            mujoco.mj_forward(model, data)
+            points.extend(corners @ data.geom_xmat[geom].reshape(3, 3).T + data.geom_xpos[geom]
+                          for geom, corners in bounds)
+        points = np.concatenate(points)
+        low, high = points.min(axis=0), points.max(axis=0)
+        camera.lookat[:] = (low + high) / 2
+        half_extent = 0.5 * np.linalg.norm(high - low)
+        camera.distance = float(1.15 * half_extent / np.sin(np.deg2rad(model.vis.global_.fovy / 2)))
         camera.azimuth = 105.0
         camera.elevation = -12.0
         return
@@ -265,10 +297,14 @@ def configure_camera(model: mujoco.MjModel, camera: mujoco.MjvCamera) -> None:
     camera.elevation = -12.0
 
 
-def configure_options(options: mujoco.MjvOption, model: mujoco.MjModel | None = None) -> None:
+def configure_options(
+    options: mujoco.MjvOption, model: mujoco.MjModel | None = None, *,
+    show_contacts: bool = False,
+) -> None:
     """Show native bone meshes; hide wrap geometry, markers, and debug overlays."""
     options.geomgroup[0] = bool(model is not None and model.ntendon)
     options.geomgroup[3] = 0
+    options.geomgroup[5] = show_contacts
     options.sitegroup[:] = 0
     options.label = mujoco.mjtLabel.mjLABEL_NONE
     options.frame = mujoco.mjtFrame.mjFRAME_NONE

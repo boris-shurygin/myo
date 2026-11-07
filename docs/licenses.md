@@ -30,6 +30,12 @@ clips и готовые checkpoint в распространяемый V0 не �
 | MuscleMimic | [Apache-2.0](https://github.com/amathislab/musclemimic/blob/main/LICENSE) | Код framework; README отдельно выделяет данные, модели и weights |
 | URLab | [Apache-2.0](https://github.com/URLab-Sim/UnrealRoboticsLab/blob/main/LICENSE) | Возможный будущий плагин; не лицензия Unreal Engine |
 
+Для вертикального imitation-опыта 2026-11-06 скачан только публичный код MuscleMimic
+commit `47b653db2bce25de834360d2ee6b2dd88142bd78`, включая LICENSE. Он остаётся
+в игнорируемом `data/musclemimic_methodology`; проверяемые файлы перечислены в
+`configs/vertical_mimic_sources.json`. Четыре алгоритмических модуля исполняются
+без модификации. Модели, веса и AMASS/SMPL/motion capture не скачивались.
+
 При включении стороннего кода/бинарных зависимостей в релиз сохраняются
 относящиеся к ним copyright notices, тексты лицензий и применимые NOTICE.
 Для Apache-2.0 изменения заимствованных файлов отмечаются; конкретный

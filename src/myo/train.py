@@ -79,6 +79,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--predictor", type=Path, default=None, help="Optional frozen error-predictor artifact.")
     parser.add_argument("--config", type=Path, default=None, help="JSON object matching PreacherCurlConfig fields.")
     parser.add_argument("--threads", type=int, default=1, help="PyTorch CPU threads; default avoids oversubscribing simulator workers.")
+    parser.add_argument("--protocol", choices=("default", "compact"), default="default",
+                        help="compact: fixed trigger/capacity grid, sweep and single moves, result-based PPO reward.")
     parser.add_argument("--warm-start-steps", type=int, default=0,
                         help="Optional causal heuristic demonstrations to initialize this same actor.")
     parser.add_argument("--log-std-init", type=float, default=0.0,
@@ -91,7 +93,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--imitation-rounds", type=int, default=3)
     parser.add_argument("--resume-imitation", type=Path,
                         help="Validated normalized checkpoint for focused endpoint/relaxation refinement.")
-    parser.add_argument("--imitation-curriculum", choices=("endpoints", "endurance", "endurance_vertical", "endurance_reachable", "endurance_transitions"), default="endpoints",
+    parser.add_argument("--imitation-curriculum", choices=("endpoints", "endurance", "endurance_vertical", "endurance_reachable", "endurance_transitions", "endurance_contact"), default="endpoints",
                         help="Resume data: endpoints, or systematic holds/releases with asymmetric fatigue.")
     parser.add_argument("--imitation-vertical-noise", type=float, default=0.012,
                         help="Teacher excitation noise above140deg in endurance_vertical collection.")
@@ -102,6 +104,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.steps < 0 or (args.steps == 0 and args.warm_start_steps == 0):
         parser.error("--steps must be positive, or zero with --warm-start-steps for initialization-only evaluation")
+    if args.protocol == "compact" and (args.warm_start_steps or args.command_imitation or args.resume_imitation):
+        parser.error("Compact protocol trains on outcomes with PPO; do not mix teacher-label initialization into this experiment")
     if args.threads < 1:
         parser.error("--threads must be positive")
     if args.warm_start_steps < 0 or not np.isfinite(args.log_std_init):
@@ -159,11 +163,17 @@ def main(argv: Sequence[str] | None = None) -> None:
             raise ValueError("Predictor artifact changed while it was being loaded.")
     check_env(env, warn=True, skip_render_check=True)
     observation_names = list(env.observation_names)
+    protocol = None
+    if args.protocol == "compact":
+        from myo.compact_protocol import CompactProtocol, protocol_metadata
+
+        env = CompactProtocol(env)
+        protocol = protocol_metadata(base_env.config.payload_mass)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     monitored = Monitor(env)
     # A compact MLP PPO baseline is normally a CPU workload. No experiment
     # tracker, network service, or automatic model download is involved.
-    policy_kwargs = {"net_arch": [64, 64], "log_std_init": args.log_std_init}
+    policy_kwargs = {"net_arch": [128, 128] if protocol else [64, 64], "log_std_init": args.log_std_init}
     features_sha256 = None
     if args.command_imitation:
         from myo.policy_features import NormalizedFeaturesExtractor
@@ -206,6 +216,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             "task": config.task_mode + "_preacher_curl",
             "algorithm": "stable_baselines3.PPO",
             "training_stage": "imitation_only" if args.steps == 0 else "imitation_then_ppo" if warm_start else "ppo",
+            "training_protocol": protocol,
+            "protocol_completed_episodes": env.completed_episodes if protocol else None,
             "seed": args.seed,
             "torch_threads": args.threads,
             "requested_training_steps": args.steps,

@@ -65,6 +65,8 @@ def make_packet(env: PreacherCurlEnv, sequence: int, episode: int, run_id: str,
         "command": {"requested_target_angle_rad": state["requested_target_q"],
                     "trigger": state["trigger"], "source": state["command_source"]},
         "payload_mass_kg": state["payload_mass_kg"],
+        "arm_mount_tilt_rad": state["arm_mount_tilt_rad"],
+        "tissue_contact": state["tissue_contact"],
         "body_poses": [{"name": env.model.body(i).name,
                         "position_m": env.data.xpos[i].tolist(),
                         "quaternion_wxyz": env.data.xquat[i].tolist()}

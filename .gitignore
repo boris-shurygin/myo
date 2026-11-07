@@ -22,6 +22,8 @@ checkpoints/
 .env.*
 !.env.example
 .DS_Store
+.ipynb_checkpoints/
+MUJOCO_LOG.TXT
 
 # Unreal generated/build output. Source assets require a deliberate LFS decision.
 Binaries/

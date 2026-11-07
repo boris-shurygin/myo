@@ -42,6 +42,8 @@ def _observation(env):
 def _collect(model, env, steps, seed, teacher_probability, episode_offset=0, *, focused=False,
              curriculum="endpoints", vertical_teacher_noise=0.012):
     base = env.unwrapped
+    has_tissue_contact = base.geometry is not None and bool(base.geometry.contact_geom_ids)
+    contact_curriculum = curriculum == "endurance_contact"
     transitions = curriculum == "endurance_transitions"
     reachable = curriculum in ("endurance_reachable", "endurance_transitions")
     random = np.random.default_rng(seed)
@@ -124,13 +126,26 @@ def _collect(model, env, steps, seed, teacher_probability, episode_offset=0, *, 
                 q = float(random.uniform(15, 24))
                 events = [(0.0, target, 0.0)]
                 passive_rest = True
-        if focused and curriculum in ("endurance", "endurance_vertical", "endurance_reachable", "endurance_transitions"):
-            family_count = 32 if transitions else 26 if reachable else 24 if curriculum == "endurance_vertical" else 16
+        if focused and curriculum in ("endurance", "endurance_vertical", "endurance_reachable", "endurance_transitions", "endurance_contact"):
+            family_count = 20 if contact_curriculum else 32 if transitions else 26 if reachable else 24 if curriculum == "endurance_vertical" else 16
             family = episode % family_count
             mass, capacity, q, velocity, duration = 1.0, 1.0, 75.0, 0.0, 12.0
             profile = (1.0, 1.0)
             passive_rest = family in (9, 10)
-            if family >= 30:
+            if contact_curriculum and family >= 16:
+                if family in (16, 17):
+                    target = 155.0 if family == 16 else 175.0
+                    duration = 24.0
+                    events = [(0.0, 75.0, 1.0), (2.0, target, 1.0), (10.0, target, 0.0)]
+                elif family == 18:
+                    duration = 30.0
+                    events = [(0.0, 75.0, 1.0), (2.0, 175.0, 1.0),
+                              (10.0, 125.0, 1.0), (20.0, 45.0, 1.0)]
+                else:
+                    duration = 24.0
+                    profile = (0.85, 1.0)
+                    events = [(0.0, 75.0, 1.0), (2.0, 138.0, 1.0)]
+            elif family >= 30:
                 q = float(random.uniform(17, 20))
                 profile = (float(random.uniform(0.90, 0.98)), 1.0)
                 events = [(0.0, 125.0 if family == 30 else 155.0, 0.0)]
@@ -171,6 +186,11 @@ def _collect(model, env, steps, seed, teacher_probability, episode_offset=0, *, 
                 # Both starting from the hold pose and reaching it matter.
                 q = float(target) if episode // family_count % 2 == 0 else 75.0
                 events = [(0.0, target, 1.0)]
+                if contact_curriculum and family in (2, 4):
+                    # A correct equilibrium at reset does not teach how to
+                    # reach it. Keep fresh lift transitions in every cycle.
+                    q, duration = 75.0, 30.0
+                    events = [(0.0, 75.0, 1.0), (2.0, target, 1.0)]
             elif family in (7, 8):
                 q = 125.0
                 profile = (0.75 if family == 7 else 0.85, 1.0)
@@ -197,6 +217,11 @@ def _collect(model, env, steps, seed, teacher_probability, episode_offset=0, *, 
                 # back into a tracking objective. Future events stay hidden.
                 events.extend((time, float(random.choice([15, 45, 75, 105, 125, 155])), 0.0)
                               for time in (6.0, 9.0))
+        if has_tissue_contact:
+            # Start before first contact; high commands must reach compression
+            # through real muscle dynamics, not a deeply intersecting reset.
+            # This restricts only data initialization, never runtime angles.
+            q = min(q, 135.0)
         env.reset(seed=seed + episode, options={"q": float(np.deg2rad(q)),
                   "qvel": velocity,
                   **({"target_angle": float(np.deg2rad(q))} if focused else {}),
@@ -269,12 +294,15 @@ def _collect(model, env, steps, seed, teacher_probability, episode_offset=0, *, 
 
 
 def _closed_loop_validation(model, env, seed, *, endurance=False, vertical_retention=False,
-                            required_behavior_priority=False, transition_retention=False):
+                            required_behavior_priority=False, transition_retention=False,
+                            contact_retention=False):
     """Select refinement snapshots by held-out behavior as well as action fit."""
     from .evaluate import CommandEvent, Scenario, run_scenario
 
+    has_contact = env.unwrapped.geometry is not None
     diagnostics = (
-        Scenario("vertical", 12.0, (CommandEvent(0, 75, 1), CommandEvent(2, 155, 1)),
+        Scenario("near_contact" if has_contact else "vertical", 12.0,
+                 (CommandEvent(0, 75, 1), CommandEvent(2, 138 if has_contact else 155, 1)),
                  1.05, capacity=0.95, initial_angle_deg=74),
         Scenario("extension", 12.0, (CommandEvent(0, 75, 1), CommandEvent(2, 15, 1)), 0.95),
         Scenario("release", 12.0, (CommandEvent(0, 75, 1), CommandEvent(2, 75, 0)), 1.1),
@@ -282,6 +310,20 @@ def _closed_loop_validation(model, env, seed, *, endurance=False, vertical_reten
         Scenario("weak_trigger", 12.0, (CommandEvent(0, 75, 1), CommandEvent(2, 105, 0.1)), 1.0),
     )
     profiles = {}
+    if contact_retention:
+        diagnostics += (
+            Scenario("contact_release", 24.0, (CommandEvent(0, 75, 1), CommandEvent(2, 155, 1),
+                     CommandEvent(10, 155, 0)), 1.05),
+            Scenario("contact_return", 30.0, (CommandEvent(0, 75, 1), CommandEvent(2, 175, 1),
+                     CommandEvent(10, 125, 1), CommandEvent(20, 45, 1)), 0.95),
+            Scenario("nominal_contact_return", 30.0,
+                     (CommandEvent(0, 75, 1), CommandEvent(2, 175, 1),
+                      CommandEvent(10, 125, 1), CommandEvent(20, 45, 1)), 1.0),
+            Scenario("nominal_hold120", 30.0,
+                     (CommandEvent(0, 75, 1), CommandEvent(2, 120, 1)), 1.0),
+            Scenario("nominal_hold125", 30.0,
+                     (CommandEvent(0, 75, 1), CommandEvent(2, 125, 1)), 1.0),
+        )
     if endurance:
         diagnostics += (
             Scenario("fatigued_hold125", 20.0, (CommandEvent(0, 125, 1),), 1.0,
@@ -340,7 +382,7 @@ def _closed_loop_validation(model, env, seed, *, endurance=False, vertical_reten
         tail = result["hold_tail_last_5s"]
         error = tail.get("angle_rmse_deg")
         penalty = (0.2 if scenario.name == "weak_trigger" else 1.0) * (error or 0.0)
-        if scenario.name in ("release", "fatigued_release125", "rest_old_target125", "rest_recovered125", "rest_recovered155"):
+        if scenario.name in ("release", "contact_release", "fatigued_release125", "rest_old_target125", "rest_recovered125", "rest_recovered155"):
             penalty += 100 * tail.get("mean_excitation", 1.0) + max(0.0, result["final_angle_deg"] - 25)
             if endurance and tail.get("mean_excitation", 1.0) > (0.001 if required_behavior_priority else 0.005):
                 penalty += 5000.0 if required_behavior_priority else 500.0
@@ -352,7 +394,8 @@ def _closed_loop_validation(model, env, seed, *, endurance=False, vertical_reten
             penalty += 500.0
         if scenario.name == "nominal_vertical" and (error is None or error > 3.0):
             penalty += 3000.0 if required_behavior_priority else 1000.0
-        if scenario.name in ("lower75_to45", "lower105_to45", "vertical_return") and (error is None or error > 5.0):
+        if scenario.name in ("lower75_to45", "lower105_to45", "vertical_return", "contact_return",
+                             "nominal_contact_return", "nominal_hold120", "nominal_hold125") and (error is None or error > 5.0):
             penalty += 5000.0
         waypoint_errors = {}
         if scenario.name == "vertical_return":
@@ -398,12 +441,13 @@ def train_command_actor(model, env, steps: int, rounds: int, seed: int, epochs: 
     per_round = steps // rounds
     # A separate teacher collection checks action error on unseen episodes.
     # Covers all seven episode families at the default 50 Hz control rate.
-    endurance = curriculum in ("endurance", "endurance_vertical", "endurance_reachable", "endurance_transitions")
+    contact_retention = curriculum == "endurance_contact"
+    endurance = curriculum in ("endurance", "endurance_vertical", "endurance_reachable", "endurance_transitions", "endurance_contact")
     vertical_retention = curriculum in ("endurance_vertical", "endurance_reachable", "endurance_transitions")
     reachable = curriculum in ("endurance_reachable", "endurance_transitions")
     transitions = curriculum == "endurance_transitions"
     validation, validation_episodes, validation_stops = _collect(
-        model, env, 22_000 if transitions else 20_000 if reachable else 15_000 if vertical_retention else 10_000 if resume else 6300,
+        model, env, 16_000 if contact_retention else 22_000 if transitions else 20_000 if reachable else 15_000 if vertical_retention else 10_000 if resume else 6300,
         seed + 100_000, 1.0, focused=resume,
         curriculum=curriculum, vertical_teacher_noise=vertical_teacher_noise)
     validation_x = torch.from_numpy(validation[0])
@@ -418,7 +462,7 @@ def train_command_actor(model, env, steps: int, rounds: int, seed: int, epochs: 
             parent_loss = float(torch.mean((mean.clamp(0.0, 1.0) - validation_y) ** 2))
         parent_score, parent_behavior = _closed_loop_validation(model, env, seed + 200_000,
             endurance=endurance, vertical_retention=vertical_retention,
-            required_behavior_priority=reachable, transition_retention=transitions)
+            required_behavior_priority=reachable, transition_retention=transitions, contact_retention=contact_retention)
         parent_state = {key: value.detach().clone() for key, value in model.policy.state_dict().items()}
         incumbent = (parent_score, 0, parent_loss, parent_state, 0)
         parent_validation = {"score": parent_score, "scenarios": parent_behavior,
@@ -459,10 +503,11 @@ def train_command_actor(model, env, steps: int, rounds: int, seed: int, epochs: 
             inactive = (y[:, flexors] <= ZERO_LABEL_TOLERANCE) & (extension_level > ZERO_LABEL_TOLERANCE)
             raw_targets[:, flexors] = torch.where(inactive, -margin, raw_targets[:, flexors])
         weights = torch.ones(len(x))
-        if vertical_retention:
+        if vertical_retention or contact_retention:
             angles = x[:, env.unwrapped.observation_names.index("angle_centered_rad")] + env.unwrapped.config.reference_center
             triggers = x[:, env.unwrapped.observation_names.index("trigger")]
-            weights[angles > np.deg2rad(140)] = 4.0
+            if vertical_retention:
+                weights[angles > np.deg2rad(140)] = 4.0
             weights[(triggers > 0) & (triggers <= 0.2)] = weak_trigger_weight
         if round_index == 0 and not resume:
             model.policy.features_extractor.set_normalization(x.mean(0), x.std(0, unbiased=False))
@@ -502,7 +547,7 @@ def train_command_actor(model, env, steps: int, rounds: int, seed: int, epochs: 
                 model.policy.load_state_dict(candidate_state)
                 score, behavior = _closed_loop_validation(model, env, seed + 200_000,
                     endurance=endurance, vertical_retention=vertical_retention,
-                    required_behavior_priority=reachable, transition_retention=transitions)
+                    required_behavior_priority=reachable, transition_retention=transitions, contact_retention=contact_retention)
                 closed_loop_reports.append({"epoch": candidate_epoch, "score": score, "scenarios": behavior})
                 print({"round": round_index + 1, "closed_loop_epoch": candidate_epoch,
                        "score": score, "scenarios": behavior}, flush=True)
@@ -543,16 +588,21 @@ def train_command_actor(model, env, steps: int, rounds: int, seed: int, epochs: 
                           if resume else "held-out episode action MSE, followed by separate closed-loop evaluation"),
             "parent_closed_loop_validation": parent_validation,
             "closed_loop_validation_seed": seed + 200_000 if resume else None,
-            "command_range_deg": [15, 155] if resume else list(TRAINING_TARGET_DEGREES),
-            "episode_duration_s": [12, 30] if reachable else [12] if endurance else [20, 24] if resume else [10, 16, 18, 20, 24],
+            "command_range_deg": [15, 175] if contact_retention else [15, 155] if resume else list(TRAINING_TARGET_DEGREES),
+            "contact_reset_angle_max_deg": 135.0 if env.unwrapped.geometry is not None else None,
+            "episode_duration_s": [12, 30] if reachable or contact_retention else [12] if endurance else [20, 24] if resume else [10, 16, 18, 20, 24],
             "near_vertical_warmup": ({"duration_s": 8, "controller": "diagnostic_heuristic",
                 "reset_angle_deg": 75, "goals_deg": [148, 151, 153, 154.5, 155, 155] + ([105, 155, 145] if transitions else []),
                 "counts_toward_label_budget": False, "history": "ordinary continuous physical history; no state reset at handoff"}
                 if reachable else None),
             "required_behavior_priority": reachable,
             "transition_retention": transitions,
-            "supervised_sample_weights": ({"angle_above_140_deg": 4, "trigger_in_0_to_02": weak_trigger_weight,
-                                           "other": 1, "batch_normalized": True} if vertical_retention else "uniform"),
+            "contact_retention": contact_retention,
+            "contact_fresh_lifts_and_nominal_selection": contact_retention,
+            "supervised_sample_weights": ({"angle_above_140_deg": 4 if vertical_retention else 1,
+                                           "trigger_in_0_to_02": weak_trigger_weight,
+                                           "other": 1, "batch_normalized": True}
+                                          if vertical_retention or contact_retention else "uniform"),
             "teacher_excitation_noise_std": {"usual": 0.012, "passive_rest": 0.0,
                 "angle_above_140_deg": vertical_teacher_noise if vertical_retention else 0.012},
             "zero_excitation_labels": {"tolerance": ZERO_LABEL_TOLERANCE,
@@ -587,8 +637,10 @@ def train_command_actor(model, env, steps: int, rounds: int, seed: int, epochs: 
                 if vertical_retention else []) + (["release75_fresh", "release75_flexors080"] if reachable else []) +
                 (["lower75_to45_fresh", "prepared105_to45_fresh", "prepared155_to145_fresh", "prepared145_to60_fresh",
                   "rest_requested125_recovered_flexors", "rest_requested155_recovered_flexors"]
-                 if transitions else [])) if endurance else None),
-            "release_training_angle_range_deg": [15, 130],
+                 if transitions else []) + (["contact155_release", "contact175_release",
+                 "contact175_return125_then45", "near_contact138_flexors085"] if contact_retention else [])) if endurance else None),
+            "release_training_angle_range_deg": None if contact_retention else [15, 130],
+            "contact_release_command_targets_deg": [155, 175] if contact_retention else None,
             "training_state_upper_deg": TRAINING_STATE_UPPER_DEGREES,
             "training_coverage_stop": "Ends only data collection episodes above 160 deg; no runtime limit or state change.",
             "uncovered_conditions": ["Release beyond the upper vertical pose; imported muscle paths are not calibrated there."],

@@ -17,6 +17,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=9,<10"]
 train = ["stable-baselines3>=2.7,<3"]
+mimic = ["jax==0.7.2", "jaxlib==0.7.2", "flax==0.12.0", "optax==0.2.6", "distrax==0.1.7"]
 
 [project.scripts]
 myo = "myo.cli:main"

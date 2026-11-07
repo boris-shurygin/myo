@@ -19,9 +19,78 @@ from myo.muscle import MuscleParameters
 
 MYOARM_COMMIT = "93b0ca8f4ec90c9899ee7f05fee561e9911da91b"
 MYOARM_MUSCLES = ("BIClong", "BICshort", "BRA", "TRIlong", "TRIlat", "TRImed")
+CONTACT_GEOM_NAMES = ("upperarm_tissue_contact", "forearm_tissue_contact")
+CONTACT_GEOM_GROUP = 5
+CONTACT_ENVELOPE_VERSION = "landmark_profiles_v1"
 
 
-def prepare_model(directory: Path) -> None:
+def _add_contact_profiles(root: ET.Element, mount: ET.Element) -> dict:
+    """Build two continuous convex envelopes from landmark-indexed sections.
+
+    Native -Y runs from shoulder to elbow and from elbow toward wrist; X is
+    approximately anterior, Z transverse. Longitudinal stations use the source
+    joint offsets. Transverse offsets/radii below are explicit engineering
+    choices in metres, not measurements of BodyParts3D or an individual human.
+    Narrow ends deliberately leave the shared hinge/crease out of self-contact.
+    Each segment has one convex hull, avoiding overlapping primitive contacts
+    on internal seams. A solver may still create a distributed contact patch.
+    These fixed shapes add neither mass nor activation-dependent deformation.
+    """
+    ulna = mount.find(".//body[@name='ulna_r']")
+    radius = mount.find(".//body[@name='radius_r']")
+    wrist = mount.find(".//body[@name='lunate_r']")
+    assert ulna is not None and radius is not None and wrist is not None
+    elbow_anchor = np.fromstring(ulna.attrib["pos"], sep=" ")
+    wrist_anchor = (np.fromstring(radius.attrib["pos"], sep=" ")
+                    + np.fromstring(wrist.attrib["pos"], sep=" "))
+    # label, fraction of longitudinal bone span, x/z centre, x/z radii (m).
+    layouts = (
+        ("humerus_r", CONTACT_GEOM_NAMES[0], -elbow_anchor[1], (
+            ("proximal_cap", -.05, 0., 0., .012, .018),
+            ("proximal_bulk", .12, .002, 0., .030, .035),
+            ("belly_proximal", .345, .005, 0., .043, .043),
+            ("belly_distal", .55, .005, 0., .043, .041),
+            ("distal_taper", .74, .001, 0., .030, .030),
+            ("elbow_taper", .86, -.006, 0., .016, .023),
+            ("elbow_crease", .937, -.008, -.007, .010, .018),
+        )),
+        ("ulna_r", CONTACT_GEOM_NAMES[1], -wrist_anchor[1], (
+            ("elbow_crease", .10, -.005, .012, .014, .020),
+            ("proximal_bulk", .255, .001, .018, .028, .035),
+            ("belly", .435, .006, .021, .031, .033),
+            ("distal_taper", .63, .010, .025, .027, .028),
+            ("wrist_taper", .83, .014, .030, .020, .023),
+            ("wrist_cap", .97, .018, .039, .012, .016),
+        )),
+    )
+    asset = root.find("asset")
+    assert asset is not None
+    profiles = []
+    for body_name, name, span, layout in layouts:
+        vertices, sections = [], []
+        for region, fraction, x, z, rx, rz in layout:
+            center = [x, -fraction * span, z]
+            sections.append({"region": region, "longitudinal_fraction": fraction,
+                             "center_m": center, "radii_xz_m": [rx, rz]})
+            for azimuth in np.linspace(0., 2. * np.pi, 16, endpoint=False):
+                vertices.extend((x + rx * np.cos(azimuth), center[1],
+                                 z + rz * np.sin(azimuth)))
+        ET.SubElement(asset, "mesh", name=f"{name}_profile",
+                      vertex=" ".join(f"{v:.9g}" for v in vertices))
+        body = mount.find(f".//body[@name='{body_name}']")
+        assert body is not None
+        ET.SubElement(body, "geom", name=name, type="mesh", mesh=f"{name}_profile",
+                      mass="0", contype="0", conaffinity="0", margin="0",
+                      group=str(CONTACT_GEOM_GROUP), rgba="0.8 0.45 0.2 0.35")
+        profiles.append({"body": body_name, "geom": name, "longitudinal_span_m": float(span),
+                         "sections": sections, "ring_vertices": 16})
+    return {"version": CONTACT_ENVELOPE_VERSION,
+            "source": "project-generated engineering profiles; no anatomical surface import",
+            "elbow_in_humerus_m": elbow_anchor.tolist(),
+            "wrist_in_ulna_m": wrist_anchor.tolist(), "profiles": profiles}
+
+
+def prepare_model(directory: Path) -> dict:
     """Create a clearly marked derivative; leave downloaded originals intact."""
     assets = directory / "upstream/myo_sim/models/arm/assets"
     source = ET.parse(assets / "myoarm_r_assets.xml").getroot()
@@ -65,11 +134,18 @@ def prepare_model(directory: Path) -> None:
                 joint.set("range", f"{np.deg2rad(15)} inf")
             else:
                 body.remove(joint)
-        # All geom collisions are disabled in this constrained arm. Source
-        # inertials are retained; render geometry cannot add contact forces.
+        # Source bone/wrap/legacy collision geometry remains noncontact.
+        # Only the separate, named tissue envelopes below generate contact.
         for geom in body.findall("geom"):
             geom.set("contype", "0")
             geom.set("conaffinity", "0")
+    contact_profiles = _add_contact_profiles(root, mount)
+    contact = ET.SubElement(root, "contact")
+    # Normal compliance permits compression; no artificial contact friction or
+    # angular stop is added. These solver parameters are uncalibrated proxies.
+    ET.SubElement(contact, "pair", name="upperarm_forearm_tissue",
+                  geom1=CONTACT_GEOM_NAMES[0], geom2=CONTACT_GEOM_NAMES[1],
+                  condim="1", margin="0", solref="0.03 1", solimp="0.1 0.95 0.015 0.5 2")
     hand = mount.find(".//body[@name='lunate_r']")
     assert hand is not None
     payload = ET.SubElement(hand, "body", name="payload", pos="0 -0.08 0")
@@ -102,6 +178,7 @@ def prepare_model(directory: Path) -> None:
     ET.indent(root)
     ET.ElementTree(root).write(directory / "model.xml", encoding="unicode")
     (directory / "muscles.json").write_text(json.dumps(parameters, indent=2) + "\n")
+    return contact_profiles
 
 
 class MyoArmGeometry:
@@ -110,7 +187,10 @@ class MyoArmGeometry:
     muscle_names = MYOARM_MUSCLES
 
     def __init__(self, asset_dir: str | Path = "data/myoarm", *,
-                 physics_dt: float = 0.001, payload_mass: float = 1.0):
+                 physics_dt: float = 0.001, payload_mass: float = 1.0,
+                 arm_mount_tilt: float = np.deg2rad(30.0),
+                 tissue_contact_time_constant: float = 0.03,
+                 tissue_contact_transition_depth: float = 0.015):
         directory = Path(asset_dir)
         manifest_path = directory / "manifest.json"
         if not manifest_path.exists():
@@ -118,6 +198,8 @@ class MyoArmGeometry:
         manifest = json.loads(manifest_path.read_text())
         if manifest.get("commit") != MYOARM_COMMIT or not manifest.get("derived"):
             raise ValueError("MyoArm source revision or preparation is incompatible; prepare assets again.")
+        if manifest.get("tissue_contact_profiles", {}).get("version") != CONTACT_ENVELOPE_VERSION:
+            raise ValueError("Prepared MyoArm contact profiles are outdated; run python3 scripts/prepare_myoarm.py again.")
         for entry in manifest["derived"]:
             if hashlib.sha256((directory / entry["path"]).read_bytes()).hexdigest() != entry["sha256"]:
                 raise ValueError(f"Prepared MyoArm asset changed: {entry['path']}")
@@ -132,6 +214,21 @@ class MyoArmGeometry:
         self.elbow_id = self.model.joint("elbow").id
         if not np.isposinf(self.model.jnt_range[self.elbow_id, 1]):
             raise ValueError("Prepared MyoArm still has a flexion limit; run python3 scripts/prepare_myoarm.py again.")
+        self.contact_geom_ids = tuple(mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, name)
+                                      for name in CONTACT_GEOM_NAMES)
+        if (min(self.contact_geom_ids) < 0 or self.model.npair != 1
+                or set(self.contact_geom_ids) != {int(self.model.pair_geom1[0]), int(self.model.pair_geom2[0])}
+                or any(self.model.geom_type[i] != mujoco.mjtGeom.mjGEOM_MESH for i in self.contact_geom_ids)):
+            raise ValueError("Prepared MyoArm lacks tissue contact envelopes; run python3 scripts/prepare_myoarm.py again.")
+        self.contact_pair_ids = (0,)
+        self.model.pair_solref[0] = [tissue_contact_time_constant, 1.0]
+        self.model.pair_solimp[0] = [0.1, 0.95, tissue_contact_transition_depth, 0.5, 2.0]
+        # Rotate the complete fixed arm mount, including attachments and inertia;
+        # joint angle still measures the same anatomical elbow coordinate.
+        half_tilt = float(arm_mount_tilt) / 2.0
+        self.model.body_quat[self.model.body("arm_mount").id] = np.asarray([
+            np.cos(half_tilt), np.cos(half_tilt), -np.sin(half_tilt), np.sin(half_tilt),
+        ]) / np.sqrt(2.0)
         self.qpos_index = int(self.model.jnt_qposadr[self.elbow_id])
         self.dof_index = int(self.model.jnt_dofadr[self.elbow_id])
         self.payload_id = self.model.body("payload").id

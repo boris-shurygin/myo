@@ -79,6 +79,18 @@ def load_controller(
             features = Path(__file__).with_name("policy_features.py")
             if hashlib.sha256(features.read_bytes()).hexdigest() != metadata["features_sha256"]:
                 raise ValueError("Policy feature preprocessing differs from its saved implementation.")
+        if metadata.get("exploration_sha256") is not None:
+            exploration = Path(__file__).with_name("policy_exploration.py")
+            if hashlib.sha256(exploration.read_bytes()).hexdigest() != metadata["exploration_sha256"]:
+                raise ValueError("Policy exploration implementation differs from its saved contract.")
+        if metadata.get("beta_policy_sha256") is not None:
+            beta_policy = Path(__file__).with_name("policy_beta.py")
+            if hashlib.sha256(beta_policy.read_bytes()).hexdigest() != metadata["beta_policy_sha256"]:
+                raise ValueError("Bounded policy implementation differs from its saved contract.")
+        if metadata.get("persistent_beta_sha256") is not None:
+            persistent = Path(__file__).with_name("policy_persistent_beta.py")
+            if hashlib.sha256(persistent.read_bytes()).hexdigest() != metadata["persistent_beta_sha256"]:
+                raise ValueError("Persistent bounded policy differs from its saved contract.")
         config = PreacherCurlConfig(**metadata["config"])
         if config_path and asdict(read_config(config_path)) != asdict(config):
             raise ValueError("Runtime configuration differs from the policy's saved configuration.")
@@ -113,6 +125,18 @@ def load_controller(
                 raise RuntimeError("Install the train extra to load a PPO controller.") from exc
             torch.set_num_threads(1)
             model = PPO.load(checkpoint, device="cpu")
+            if model.policy.__class__.__module__ == "myo.policy_exploration" and not metadata.get("exploration_sha256"):
+                raise ValueError("Custom exploration checkpoint is missing its implementation fingerprint.")
+            if model.policy.__class__.__module__ in ("myo.policy_beta", "myo.policy_persistent_beta") and not metadata.get("beta_policy_sha256"):
+                raise ValueError("Bounded policy checkpoint is missing its implementation fingerprint.")
+            if model.policy.__class__.__module__ == "myo.policy_persistent_beta" and not metadata.get("persistent_beta_sha256"):
+                raise ValueError("Persistent policy checkpoint is missing its implementation fingerprint.")
+            if model.policy.__class__.__module__ == "myo.policy_persistent_beta":
+                expected_indices = [env.observation_names.index(f"history/1/excitation/{name}")
+                                    for name in env.unwrapped.muscle_names]
+                if (metadata.get("action_persistence") != model.policy.persistence
+                        or model.policy.previous_action_indices != expected_indices):
+                    raise ValueError("Persistent policy history mapping or coefficient differs from its contract.")
 
             def act(observation: np.ndarray) -> np.ndarray:
                 return np.asarray(model.predict(observation, deterministic=True)[0], dtype=np.float32)

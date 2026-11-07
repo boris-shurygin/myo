@@ -133,13 +133,22 @@ def test_keyboard_commands_preserve_pose_and_delayed_muscle_state():
         viewer.paused = False
         viewer.color_mode = "activation"
         viewer.selected_muscle = 0
-        for key in (265, ord("0"), ord("3"), ord("M"), ord(" ")):
+        viewer.show_contacts = False
+        for key in (265, ord("0"), ord("3"), ord("M"), ord("C"), ord(" ")):
             viewer._keys.put(key)
         assert not viewer.poll()
         command = env.telemetry()
         assert command["requested_target_q"] == pytest.approx(initial_target + np.deg2rad(5))
         assert command["trigger"] == 0.0
         assert viewer.paused and viewer.color_mode == "force" and viewer.selected_muscle == 1
+        assert viewer.show_contacts
+        options = mujoco.MjvOption()
+        configure_options(options, env.model, show_contacts=viewer.show_contacts)
+        assert options.geomgroup[5] == 1
+        viewer._keys.put(ord("C"))
+        viewer.poll()
+        configure_options(options, env.model, show_contacts=viewer.show_contacts)
+        assert options.geomgroup[5] == 0
         assert _physics_snapshot(env) == before
         # No new key leaves the persistent target in place.
         assert not viewer.poll()

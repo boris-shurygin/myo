@@ -90,6 +90,8 @@ def measure_pose(env: PreacherCurlEnv, angle: float, capacity: float = 1.0) -> d
         "holding_group": "flexors" if required >= 0 else "extensors",
         "uniform_holding_activation": activation,
         "holding_reachable": bool(reachable),
+        "tissue_contact": env.tissue_contact_metrics(),
+        "holding_balance_excludes_tissue_contact": True,
         "muscles": [muscle_row(i) for i in range(len(arms))],
     }
 
@@ -123,7 +125,8 @@ def audit(config: PreacherCurlConfig, angles: list[float], capacity: float = 1.0
             "protocol": "fixed_pose_static_series_elastic_equilibrium; no_time_advance; no_fatigue_update",
             "torque_sign": "flexion_positive; gravity_compensation_is_required_motor_torque",
             "limitations": ["mechanical full activation is not measured human voluntary MVC",
-                            "no collisions or anatomical validity implied beyond imported ROM",
+                            "holding balance excludes tissue contact; overlapping fixture poses are not free holding equilibria",
+                            "anatomical validity is not implied beyond imported ROM",
                             "uniform agonist activation is a static feasibility probe, not a controller"],
             "poses": rows,
         }
