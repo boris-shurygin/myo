@@ -1,0 +1,9 @@
+{
+  "major": 5,
+  "minor": 8,
+  "patch": 4,
+  "changelist": 58902052,
+  "muscle_ids": ["BIClong", "BICshort", "BRA", "TRIlong", "TRIlat", "TRImed"],
+  "state_schema": "myo.character_state.v2",
+  "physics_feedback": false
+}

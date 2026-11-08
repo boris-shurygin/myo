@@ -1,5 +1,401 @@
 # Проверки проекта
 
+## Сглаживание поверхностей и конфликт освещения UE — 2026-11-08
+
+После просмотра крупного плана исправлено плоское освещение каждого треугольника.
+`myo.render_normals` рассчитывает угловое взвешивание нормалей в совпадающих
+позициях STL/OBJ, включая раздельные вершины triangle soup. Порог перегиба — 75°;
+противоположные стороны тонких поверхностей не усредняются. В UE передаются
+собственные corner normals, автоматический пересчёт нормалей выключен.
+Новые локальные StaticMesh имеют суффикс `angle75_v1`, чтобы не переиспользовать
+старые assets с плоскими нормалями. Пересохранены 32 костных и 24 мышечных меша,
+восемь статических уровней. Исходные позиции и треугольники не менялись;
+размеры и число треугольников каждого импортированного mesh проверены повторно.
+Это улучшение освещения, не повышение анатомической детализации и не Flesh.
+
+У key/fill DirectionalLight назначены ForwardShadingPriority 1/0.
+Это устраняет причину предупреждения о двух конкурирующих источниках;
+экранные сообщения не отключались. Назначение параметра — в
+[документации Epic](https://dev.epicgames.com/documentation/en-us/unreal-engine/BlueprintAPI/Rendering/Lighting/SetForwardShadingPriority).
+Повторная загрузка сцены подтверждает разные приоритеты и единственный максимум.
+
+Выполнено из корня репозитория:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage prepare-bones --seconds 120
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage render-bones --view muscles --seconds 120 --fps 20 --capture-frame
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage viewer --view muscles --seconds 45 --fps 20 --capture-frame
+.\.venv\Scripts\python.exe -m pytest -q tests/test_render_normals.py tests/test_myoarm_geometry.py tests/test_unreal_geometry.py tests/test_unreal_muscles.py --basetemp=.cache/pytest-ue-smooth-final
+.\.venv\Scripts\python.exe -m compileall -q src/myo/render_normals.py integrations/unreal/scripts
+git diff --check
+```
+
+| Опыт | Время, s | Peak job commit, GiB | Общая VRAM max, MiB | GPU max, °C | Результат |
+| --- | ---: | ---: | ---: | ---: | --- |
+| NullRHI, сглаженные меши и уровни | 25.13 | 1.91 | 1045 | 50 | exit0 |
+| Повторная загрузка, кадр и PIE | 42.16 | 3.58 | 1551 | 51 | exit0, light priorities=[1,0] |
+| Отдельный `-game`, кадр после прогрева | 45.45 | 2.09 | 1383 | 51 | stopped_at_time_budget |
+
+В графических опытах сохранены DX11, 640×360, cap20 FPS, два логических CPU
+и hard job commit 6 GiB. Во всех трёх опытах ресурсные пороги не срабатывали,
+fatal/ensure нет, после остановки 0 процессов Job Object.
+Проба PIE повторно проверяет 32 кости, шесть мышц, камеру, невидимый навигатор
+и неизменность объектов сцены при перемещении камеры.
+
+Кадр до изменения — `.cache/unreal/profiles/20261108T141311856960Z-render-bones/frame.png`,
+после — `20261108T145021350205Z-render-bones/frame.png`, тот же исходный ракурс.
+Оба просмотрены: сглаживание особенно заметно на лопатке и длинных костях;
+силуэт остаётся упрощённым. Кадр самого `-game` также просмотрен:
+`20261108T145208360544Z-viewer/frame.png`.
+NullRHI-отчёт: `20261108T144942742294Z-prepare-bones`.
+
+Выбранные проверки: **13 passed**; compileall и `git diff --check` успешны.
+Новая регрессия проверяет шов между раздельными STL-треугольниками,
+сохранение резких/обратных граней и отсутствие изменения геометрии.
+Код физики, телеметрии и контроллера не менялся; полный training-набор не запускался.
+Более подробные поверхности в этом шаге не загружались: проверенный текущий
+[официальный каталог BodyParts3D](https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/)
+содержит OBJ99; уточнение геометрии и активная мышечная деформация остаются отдельной работой.
+
+## Первые поверхности мышц BodyParts3D в UE — 2026-11-08
+
+По запросу продолжить мышечную визуализацию получены 10 открытых OBJ из официального
+BodyParts3D 4.0 IS-A OBJ 99: шесть различных мышечных головок/областей и четыре
+опорные кости. Каталоги подтверждают соответствие FMA/element IDs каждому из
+`BIClong`, `BICshort`, `BRA`, `TRIlong`, `TRIlat`, `TRImed`.
+Пакет, лицензия CC BY 4.0, атрибуция, старые комментарии лицензии внутри OBJ,
+методика и ограничения записаны в [bodyparts3d.md](bodyparts3d.md), per-file SHA-256 —
+в `integrations/unreal/bodyparts3d-source.json`. Исходники/производные assets игнорируются Git.
+Из архива 142903898 bytes через HTTP Range передано 1009926 bytes;
+весь архив не скачивался. Два каталога скачаны отдельно. Повторная подготовка
+локального набора проверила все hashes и IDs без сетевой загрузки.
+
+После объединения только точных дубликатов вершин швов у шести мышц:
+0 открытых рёбер, 0 nonmanifold-рёбер, 0 вырожденных треугольников;
+всего 10054 треугольника. Это не проверка самопересечений или tet-качества.
+Первичная similarity ICP-подгонка source-костей к MyoArm даёт средние расстояния
+между вершинами 5.29 mm (humerus), 5.35 mm (radius), 3.87 mm (ulna).
+Остаточные ошибки и attachment-маски требуют ручной работы; анатомическая точность
+не заявляется. Сохранены 24 позных StaticMesh и четыре уровня `L_Muscles_*`.
+Цвет материала постоянный. Здесь нет активной деформации, Flesh, сухожильных
+объёмов, кожи или изменения физики; временное смешивание у локтя зависит только от позы.
+
+Фактически выполнено из корня:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/prepare_bodyparts3d.py
+.\.venv\Scripts\python.exe -m myo.unreal_muscles
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage prepare-bones --seconds 120
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage render-bones --view muscles --seconds 120 --fps 20 --capture-frame
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage viewer --view muscles --pose 120 --seconds 45 --fps 20 --capture-frame
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage viewer --view muscles --pose 15 --seconds 45 --fps 20 --capture-frame
+.\.venv\Scripts\python.exe -m pytest -q tests/test_myoarm_geometry.py tests/test_unreal_geometry.py tests/test_unreal_muscles.py --basetemp=.cache/pytest-camera-muscles-final
+```
+
+| Опыт | Время, s | Peak job commit, GiB | Общая VRAM max, MiB | GPU max, °C | Результат |
+| --- | ---: | ---: | ---: | ---: | --- |
+| NullRHI, кости +24 muscle meshes | 34.05 | 1.80 | 1260 | 52 | exit0 |
+| Мышцы 90°, editor capture + PIE | 49.33 | 3.78 | 1670 | 51 | exit0, 32 костных +6 мышечных объектов |
+| Мышцы 120°, отдельный `-game` | 45.38 | 2.21 | 1624 | 52 | кадр после прогрева, time budget |
+| Мышцы 15°, отдельный `-game` | 45.41 | 2.20 | 1475 | 51 | кадр после прогрева, time budget |
+
+Кадры 15/90/120° просмотрены: кости, груз и мышечные поверхности видны;
+это первичная проверка размещения, не подтверждение прикреплений и скольжения.
+45° пока проверены только экспортом/импортом, без отдельного просмотра кадра.
+В PIE-мышечной сцене проверены один невидимый навигатор, прикреплённая камера,
+её перемещение/поворот и неизменность трансформов костей, мышц и груза.
+Во всех четырёх опытах после остановки 0 процессов в Job Object, fatal/ensure нет,
+ресурсные пороги не срабатывали. Viewer-пробы завершены по времени, а не exit0.
+
+Отчёты в `.cache/unreal/profiles/`:
+`20261108T141157235012Z-prepare-bones`, `20261108T141311856960Z-render-bones`,
+`20261108T141424311959Z-viewer`, `20261108T141608662461Z-viewer`; кадры — `frame.png`.
+Выбранные geometry-тесты: **12 passed**. Compileall, PowerShell parser и
+`git diff --check` успешны. Полный training-набор не запускался; код динамики не менялся.
+
+Запуск для пользователя: `.\view-arm.cmd -View muscles`; камера и ограничения
+нагрузки те же, что у вида костей. Подготовка активного сокращения остаётся следующим этапом.
+
+## Управление камерой UE и лишний шар — 2026-11-08
+
+Клавиши раньше двигали штатный DefaultPawn с шарообразным мешем, пока CameraActor
+оставался неподвижным. Теперь камера прикреплена к явно размещённому навигатору
+с отключёнными мешем и коллизиями. Отдельный GameMode не создаёт дополнительный
+pawn. Мышь и WASD управляют камерой, Q/E или Ctrl/Space задают высоту;
+Home перезагружает статическую сцену для возврата исходного вида, Esc закрывает окно.
+Груз у кисти сохранён; это другой объект. Физика и мышцы MuJoCo не менялись.
+
+Команды: `profile_unreal.py --stage prepare-bones --seconds 120`, затем
+`--stage render-bones --seconds 120 --fps 20 --capture-frame` и
+`--stage viewer --visible --seconds 60 --fps 20 --capture-frame` через `.venv\Scripts\python.exe`.
+NullRHI-импорт `20261108T140135629411Z-prepare-bones`: exit0 за15.45 s.
+PIE-проба `20261108T140347493252Z-render-bones`: exit0 за41.31 s;
+один pawn,0 render-мешей у навигатора, камера прикреплена к нему.
+Вызваны штатные callbacks перемещения и поворота: камера сдвинулась на16.42 cm
+и повернулась на53.44°, трансформы33 объектов костей/груза не изменились.
+Это проверка реакции камеры, не измерение скорости мыши.
+
+Видимый `-game` `20261108T140511929411Z-viewer`: окну собственного PID адресованы
+Win32-сообщения W/E/Right/Home/Esc (без глобального ввода клавиатуры).
+Home подтверждён повторным LoadMap той же сцены, Esc — штатным exit0.
+Кадр просмотрен: кости и груз видны. Пик job commit2.24 GiB, общая VRAM1493 MiB,
+GPU52°C; после остановки0 процессов, fatal/ensure нет. Само движение от W/E
+по этому кадру не оценивается; его callbacks проверены отдельно в PIE.
+Ручная оценка удобства управления мышью остаётся за пользователем.
+Запуск: `.\view-arm.cmd`, ограничения нагрузки и120 s по умолчанию сохранены.
+
+## Отдельный UE-вьювер и исправление пустой сцены — 2026-11-08
+
+Добавлены `view-arm.cmd` и `scripts/viewer.ps1`: запуск установленного UE5.8.4
+с `-game`, без редакторских панелей. Параметры: `-Pose 15|45|90|120`,
+`-Seconds 15..120` (по умолчанию90° и120 s). Это запуск через движок,
+не упакованный автономный executable. Статические кости и груз уже видны;
+live-телеметрия, управление, мышцы Flesh и кожа здесь пока не реализованы.
+
+Причина отсутствия костей найдена: GeometryScript создавал StaticMesh в памяти,
+но `.uasset` не сохранялись. Сохранение только карты оставляло потерянные ссылки
+в следующем процессе. Теперь каждый меш явно сохраняется, проверяется файл;
+при повторной загрузке проверяется весь ожидаемый набор из32 костей.
+**Прежние результаты PrepareBones и профили «костей» ниже подтверждали создание
+мешей в памяти/загрузку карты, но не сохранённую геометрию и не её изображение.**
+
+Камера теперь автоматически назначается Player0 и охватывает скелет с грузом.
+Два DirectionalLight переведены в Movable, экспозиция фиксирована; запекание
+света для этих сцен не требуется. Проба Play проверяет выбранный CameraActor.
+В диагностике сохранён отдельный кадр редактора и кадр `-game` после120 кадров
+прогрева. Оба изображения позы90° просмотрены: видны кости руки, лопатка и груз.
+Проверка остальных трёх поз по изображениям остаётся открытой.
+
+Фактически выполнено последовательно, с прежними ограничениями ресурсов:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage prepare-bones --seconds 120
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage render-bones --seconds 120 --fps 20 --capture-frame
+.\view-arm.cmd -Seconds 60
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage viewer --seconds 45 --fps 20 --capture-frame
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage selftest
+.\.venv\Scripts\python.exe -m compileall -q scripts/profile_unreal.py scripts/unreal_profile_win32.py integrations/unreal/scripts
+.\.venv\Scripts\python.exe -m pytest -q tests/test_myoarm_geometry.py tests/test_unreal_geometry.py --basetemp=.cache/pytest-viewer-final
+```
+
+| Опыт | Фактическое время, s | Peak job commit, GiB | Общая VRAM max, MiB | GPU max, °C | Результат |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Импорт с сохранением32 мешей | 19.52 | 1.89 | — | — | exit0, все32 файла существуют |
+| Повторная загрузка, кадр, Play camera | 45.34 | 3.57 | 1606 | 51 | exit0,32 костных компонента, missing=[] |
+| Видимое окно через `view-arm.cmd` | 60.73 | 2.10 | 1287 | 51 | `-game`, целевая карта, окно MYO Arm Viewer |
+| Кадр самого `-game` после прогрева | 45.45 | 2.12 | 1684 | 51 | frame.png просмотрен, кости видны |
+
+В двух viewer-опытах монитор завершил дерево по времени: `stopped_at_time_budget`,
+это не штатный exit0. После каждого опыта осталось0 процессов Job Object,
+ресурсные пороги не сработали; fatal/ensure в итоговых графических логах нет.
+Измерения GPU/VRAM относятся ко всей системе, включая другие приложения.
+Камера и ресурсы проверены, но отзывчивость рабочего стола самим пользователем
+в этих конкретных опытах отдельно не подтверждена.
+
+Отчёты: `.cache/unreal/profiles/20261108T123933331461Z-prepare-bones`,
+`20261108T124447021747Z-render-bones`, `20261108T124556620989Z-viewer`,
+`20261108T124720834746Z-viewer`; в последнем лежит `frame.png` режима `-game`.
+Selftest `20261108T124807853993Z-selftest`: **passed**, включая наследование
+affinity, лимит памяти, завершение дерева и kill-on-close.
+В мониторе устранена гонка чтения метаданных уже завершающегося процесса:
+ошибка отдельного PID сохраняется в `process_query_errors`, общая нативная
+статистика Job Object продолжает контролироваться. Порог commit дополнительно
+учитывает peak job commit, а не только сумму доступных private bytes.
+
+В ходе исправления были неуспешные промежуточные пробы: запрет записи shader
+working directory вне workspace (путь перенесён в `.cache/unreal/ShaderWorking`),
+ensure от редакторского realtime override (вызов удалён), ранний кадр до загрузки
+материалов и ошибка `__file__` в отложенном Python callback (путь вычисляется заранее).
+Они не засчитываются как успешная визуальная проверка.
+Итог: **11 passed** в выбранных geometry-тестах, compileall и PowerShell parser
+для обоих launcher-скриптов и `git diff --check` успешны. Физика/контроллер не менялись;
+полный набор с optional training-зависимостями не перезапускался.
+
+## Подготовка видимого просмотра — 2026-11-08
+
+По запросу о доступной картинке проверено наличие четырёх `L_Bones_*.umap`.
+Скриншотов в `Saved/Myo` пока нет; визуальная приёмка остаётся открытой.
+В ограниченный profiler добавлен `--visible`: используется `UnrealEditor.exe`
+и отключается offscreen, сохраняются Job Object, DX11 и временной бюджет.
+Проверены compileall, `profile_unreal.py --help`, построение команды с существующим
+editor executable и правильной картой первым аргументом после проекта,
+`git diff --check`: exit0. Движок при этих проверках **не запускался**;
+работающий видимый интерфейс не заявляется. Команда просмотра — в
+[инструкции профилирования](unreal-load-profiling.md#просмотр-сцены).
+
+## Ограниченное профилирование Windows/UE — 2026-11-08
+
+После сообщения о системном зависании добавлены `scripts/profile_unreal.py`
+и Windows helper `scripts/unreal_profile_win32.py`. Новые зависимости не
+устанавливались. CPU по реестру: **i5-12400F**, физическая RAM по Win32 —
+**31.82 GiB**. GPU и движок те же: RTX 3060 12 GiB, UE 5.8.4 CL 58902052.
+Методика, параметры и ограничения — в [unreal-load-profiling.md](unreal-load-profiling.md).
+
+Дерево UE получает **affinity mask 0x3**, Below Normal priority и hard limit
+**6 GiB committed memory** через Windows Job Object до возобновления процесса.
+Монитор останавливает его по времени, при свободной RAM/commit менее6 GiB,
+VRAM более8192 MiB, GPU ≥75°C, задержке отсчёта более5 s или private bytes
+дерева более90% hard limit. VRAM, температура и CPU системы — общие показатели,
+не изолированная стоимость UE. Сами бюджеты — инженерные настройки опыта.
+
+Фактически выполнено последовательно, каждый следующий графический опыт
+запускался после анализа предыдущего:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage selftest
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage baseline --seconds 15
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage probe --seconds 45
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage render-entry --seconds 45
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage render-entry --seconds 90
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage render-bones --seconds 90
+.\.venv\Scripts\python.exe scripts/profile_unreal.py --stage render-bones --seconds 90 --fps 20
+```
+
+| Опыт | Время окна/фактическое, s | Пик commit дерева, GiB | Минимум свободной RAM, GiB | Пик общей VRAM, MiB | GPU max, °C |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Фон без UE | 15 /15.52 | — | 17.89 | 901 | 51 |
+| NullRHI Probe | 45 /38.94 | 1.50 | 16.21 | 902 | 51 |
+| Пустая Entry | 45 /45.38 | 3.01 | 15.17 | 1260 | 52 |
+| Та же Entry | 90 /90.64 | 3.43 | 15.39 | 1278 | 52 |
+| Кости `L_Bones_90`, исправленный запуск | 90 /90.59 | 3.47 | 17.96 | 1347 | 52 |
+| Те же кости, cap20 FPS | 90 /90.63 | 3.36 | 17.99 | 1374 | 52 |
+
+Графика: **DX11, offscreen, запрошено640×360, cap10 и затем20 FPS**, два логических CPU.
+Ограничения FPS подтверждены строками `t.MaxFPS = "10"` / `"20"`, а настройка shader
+compiler — `Using 1 local workers`. Активных ShaderCompileWorker в отсчётах
+не обнаружено; кэш уже прогрет. Нагрузку массовой/холодной компиляции это
+**не проверяет**. Между графическими пробами изменялись длительность и затем
+карта, затем только cap FPS. DX12, cap30 FPS и большее разрешение в этих опытах не запускались.
+
+NullRHI-проба закончилась самостоятельно с exit0. Графические процессы были
+намеренно завершены внешним монитором по временному бюджету; это
+`stopped_at_time_budget`, а не штатный exit0 редактора. Во всех пяти
+графических запусках редактор инициализировался; после остановки в каждом
+Job Object осталось **0 активных процессов**. Пороги ресурсов не сработали,
+максимальный интервал монитора во всех опытах ≤**0.829 s**.
+В костной пробе с cap10 FPS общий CPU: среднее **14.18%**, пик **44%**;
+общий GPU: среднее **18.35%**, пик **30%**. Это не измерение frame time.
+После подтверждения пользователем отзывчивости выполнена ступень cap20 FPS:
+общий CPU — среднее9.28%, пик52.78%; GPU — среднее6.58%, пик22%.
+Фоновая нагрузка всей системы между опытами различается; эти числа не доказывают
+снижение стоимости рендера при увеличении cap. Окно заняло90.625 s,
+получено113 отсчётов, ресурсные пороги не сработали, загруженная карта проверена,
+после остановки0 процессов. Cap в консоли не является измерением достигнутого FPS.
+
+Первая попытка `render-bones` фактически загрузила `Entry`: UE читает как
+карту только первый аргумент после `.uproject`. Лог обнаружил ошибку,
+результат **не засчитан** как профиль костей. Сохранённый отчёт помечен
+`target_not_loaded` с прежним статусом в `status_before_map_review`.
+Порядок аргументов исправлен также в ручном `unreal.ps1 -Action Open`.
+Повторная костная проба подтверждена строкой `MAP LOAD FILE` с полным путём
+`Content/Generated/Bones_v1/L_Bones_90.umap`; `target_map_loaded=true`.
+Это проверка загрузки карты, не визуальная приёмка позы или screenshot.
+
+Итоговый selftest повторён: **passed**, проверены наследование affinity,
+завершение дерева процессов, отказ512 MiB выделения при128 MiB лимите и
+завершение дочернего процесса при закрытии job handle **без** явного terminate.
+Первый selftest предполагал ровно два процесса и обнаружил дополнительные
+Windows/venv launcher processes; проверка исправлена на наблюдение конкретного
+дочернего PID. Это не требует ослабления ограничений дерева.
+
+Сырые отчёты в игнорируемом `.cache/unreal/profiles/`:
+`20261108T115341358817Z-baseline`, `20261108T115411961152Z-probe`,
+`20261108T115648312183Z-render-entry`, `20261108T115830150788Z-render-entry`,
+`20261108T120243186698Z-render-bones`, `20261108T120848952109Z-render-bones`
+(последний — cap20 FPS); финальный guard selftest:
+`20261108T120528628585Z-selftest`. Неправильная карта сохранена отдельно в
+`20261108T120029670375Z-render-bones` и не входит в успешную строку таблицы.
+Каждый отсчёт JSONL сбрасывается на диск до следующего опроса.
+
+Compileall двух новых Python-скриптов, PowerShell parser для изменённого
+launcher и `git diff --check`: exit0. Физика/контроллер/телеметрия не менялись;
+pytest динамики не повторялся. Массовая компиляция, видимый GUI, screenshot,
+DX12 и активный Flesh остаются отдельными проверками. Объективные показатели
+этих коротких запусков не устанавливают причину прежнего системного зависания.
+
+## Начало UE-визуализации на Windows — 2026-11-08
+
+Исходный checkout: `aaced208ce1fcd6200a7fa052a2651f0d60b76ce`.
+Установлен UE **5.8.4, CL 58902052**, RTX 3060 **12288 MiB**, драйвер **610.88**;
+Windows registry build **26200.9711**, DisplayVersion **25H2**.
+WMI в sandbox недоступен; сведения о GPU получены через `nvidia-smi`,
+версия UE — из установленного `Engine/Build/Build.version`.
+
+Созданы `scripts/setup-windows.ps1`, начальный `MyoD1.uproject`, editor-скрипты
+и экспортёр `myo.unreal_geometry`. Собственный C++-модуль пока не создавался:
+Visual Studio C++/Windows SDK не обнаружены в проверенных стандартных местах
+и реестре. В проект добавлен `.vsconfig`; его компиляция не проверялась.
+
+Фактически выполнены из `D:\myo`:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
+.\.venv\Scripts\python.exe scripts/prepare_myoarm.py
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/unreal.ps1 -Action Probe
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/unreal.ps1 -Action PrepareBones
+.\.venv\Scripts\python.exe -m pytest -q tests/test_myoarm_geometry.py tests/test_unreal_geometry.py --basetemp=.cache/pytest-unreal-final
+.\.venv\Scripts\python.exe -m myo rollout --config configs/d1_myoarm.json --controller heuristic --seconds 1 --output runs/windows_ue_smoke.jsonl
+```
+
+- Bootstrap повторно завершился успешно: **Python 3.12.13, MuJoCo 3.17.0,
+  NumPy 2.5.4, Gymnasium 1.4.0**, `pip check` без ошибок.
+- Импорт MyoArm: **39 файлов** проверены по закреплённым hashes;
+  исходники и производные оставлены в игнорируемом `data/myoarm`.
+- `Probe`: exit0; доступны отражённые Flesh/Dataflow types, три поставляемых
+  engine assets и создание Flesh terminal node. Первоначальный запуск с Zen
+  не мог записать security config/подключиться к локальному сервису;
+  launcher переключён на файловый DDC. USD dependencies пишут предупреждения
+  о загрузке плагинов; USD-import этим прогоном не проверялся.
+- `PrepareBones`: финальный прогон **exit0**, **32 meshes**, четыре уровня
+  15/45/90/120°. Для каждого Static Mesh проверены bounds с допуском
+  0.001 cm и точное число треугольников. Для STL без UV добавлена диагностическая
+  UV0. Неманифолдные участки сначала теряли грани в DynamicMesh; финальная
+  сборка использует независимые render-треугольники, сохраняя исходную геометрию.
+- Геометрические проверки: **11 passed in 7.64 s**. Новый сценарий читает
+  экспортированный JSON и сравнивает все мировые вершины во всех четырёх позах
+  с MuJoCo; учитывает отражение Y, масштаб, quaternion и mesh-to-body offsets.
+- Headless heuristic: **1 s**, **0 physical failures**, RMSE угла
+  **3.105371°**, wall time **0.781887 s**. Это только smoke test Windows-расчёта,
+  не доказательство успешной policy или эквивалентности Linux/Windows.
+
+Полный `pytest -q --basetemp=.cache/pytest-full` предпринимался, но **не прошёл
+сбор тестов**: сначала отсутствовал `torch`, после установки CPU PyTorch
+`2.15.0+cpu` — `stable_baselines3` (5 collection errors). Установка оставшихся
+optional train dependencies не выполнилась: автоматическая проверка разрешения
+вернула **HTTP 403**, не вынеся решения о безопасности действия. Наличие
+успешных 11 проверок выше не объявляется успешным полным pytest.
+Обучение не запускалось. Windows bootstrap по умолчанию остаётся base/dev.
+
+Отдельная проба пассивного Flesh-объёма получила ненулевую коллекцию
+(в engine log — 232 nodes) с половинными размерами **3×3×10 cm**.
+Повторная загрузка сохранённого asset вызвала
+`ensure(Version == GetLatestVersionNumber())` в `GeometryCollection.cpp:1491`;
+редактор вернул exit1. Существование `.uasset` не считается успехом.
+Этот эксперимент теперь выделен в `-Action FleshProbe`; его итоговый launcher
+дополнительно сохраняет exit code редактора в JSON, не подменяя его Python-флагом.
+Активное сокращение, curve override и корректность Flesh solver **не доказаны**.
+
+Графический запуск `-Action Capture` предпринят до добавления опции
+`-EnableRendering`. Он запускал D3D12-редактор для четырёх offscreen-кадров;
+лог показывает **9 local workers for shader compilation**. В начале процесса
+было 32.6 GB RAM суммарно, около 11.3 GB свободно. Итогового отчёта и PNG нет.
+Пользователь сообщил о полном зависании компьютера; причина не установлена,
+связь с CPU/RAM/GPU нагрузкой остаётся предположением. После возобновления
+процессов Unreal/ShaderCompileWorker/Zen не обнаружено.
+
+После сообщения о зависании UE **не запускался**. В launcher добавлен
+`-corelimit=2`, а `Open`/`Capture` требуют `-EnableRendering`; FPS ограничен 30.
+Семантика core limit сверена с локальными `GenericPlatformMisc.cpp` и
+`ShaderCompiler.cpp`: при двух сообщаемых ядрах выбирается один shader worker.
+Это ещё не проверка реальной нагрузки с новыми настройками и не ограничение
+RAM/VRAM. Из конфигурации удалена автоматически добавленная секция Android
+File Server; этот ненужный плагин явно отключён.
+
+После последних правок проверены синтаксис обоих PowerShell-скриптов,
+геометрические тесты выше и `git diff --check`. Видимые позы, screenshot runner,
+сборка C++, standalone, live UDP и деформация тканей остаются непроверенными.
+Подробные команды и текущий объём: [MyoD1](../integrations/unreal/MyoD1/README.md).
+
 ## План параллельной работы десктоп/ноутбук — 2026-11-07
 
 Добавлен [план Unreal-демо скамьи Скотта](desktop-unreal-preacher-plan.md).

@@ -1,0 +1,14 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Simulation",
+  "Description": "MyoArm D1 visualization. MuJoCo owns physical state.",
+  "Plugins": [
+    { "Name": "ChaosFlesh", "Enabled": true },
+    { "Name": "Dataflow", "Enabled": true },
+    { "Name": "GeometryScripting", "Enabled": true },
+    { "Name": "PythonScriptPlugin", "Enabled": true },
+    { "Name": "EditorScriptingUtilities", "Enabled": true },
+    { "Name": "AndroidFileServer", "Enabled": false }
+  ]
+}
