@@ -7,6 +7,7 @@ from functools import lru_cache
 import os
 import queue
 import sys
+import threading
 
 import mujoco
 import numpy as np
@@ -45,6 +46,7 @@ def legend_images(color_mode: str, left: int = 0, bottom: int = 0):
 def text_overlays(
     env, paused: bool = False, color_mode: str = "tissue", selected_muscle: int = 0,
     stop_reason: str | None = None, show_contacts: bool = False,
+    fixed_trigger: float | None = None, controller_label: str | None = None,
 ) -> list[tuple[int, int, str, str]]:
     """Display each signal separately; percentages never stand in for force."""
     state = env.telemetry()
@@ -80,11 +82,14 @@ def text_overlays(
     status = "STOPPED" if stop_reason else "PAUSED" if paused else "ARM DIAGNOSTIC"
     command_help = ("Up/Down target | +/- trigger | 0 release\n" if task != "reference"
                     else "Scripted commands (read-only)\n")
+    if fixed_trigger is not None:
+        command_help = f"Up/Down target +/-5 deg | Trigger fixed {100*fixed_trigger:.0f}%\n"
     return [
         (mujoco.mjtFont.mjFONT_NORMAL, mujoco.mjtGridPos.mjGRID_TOPLEFT,
          f"{status} | {geometry}\nElbow {angle:.0f} deg | Load {state['payload_mass_kg']:g} kg"
          f"\nTarget {target:.0f} deg | Requested {requested:.0f} deg"
          f"\nTrigger {100 * state.get('trigger', 1.0):.0f}% | {state.get('command_source', task)}"
+         + (f"\n{controller_label}" if controller_label else "")
          + contact_text
          + ("\nMuscle path reversal: outside source anatomy range" if state.get("path_direction_reversal") else "")
          + (f"\n{stop_reason} | R to reset" if stop_reason else ""), ""),
@@ -101,7 +106,8 @@ def text_overlays(
 class DemoViewer:
     """Render a separate model/data copy; GUI edits never enter the simulation."""
 
-    def __init__(self, env, *, color_mode: str = "tissue", selected_muscle: int = 0) -> None:
+    def __init__(self, env, *, color_mode: str = "tissue", selected_muscle: int = 0,
+                 fixed_trigger: float | None = None, controller_label: str | None = None) -> None:
         if color_mode not in COLOR_MODES:
             raise ValueError(f"Unknown muscle color mode: {color_mode}")
         if sys.platform.startswith("linux") and not (
@@ -111,6 +117,8 @@ class DemoViewer:
         from mujoco import viewer
 
         self.env = env
+        self.fixed_trigger = fixed_trigger
+        self.controller_label = controller_label
         self.model = copy.copy(env.model)
         self.data = mujoco.MjData(self.model)
         mujoco.mj_copyData(self.data, self.model, env.data)
@@ -121,17 +129,35 @@ class DemoViewer:
         self.selected_muscle = selected_muscle % len(env.muscles)
         self.show_contacts = False
         self._path_scene = mujoco.MjvScene(self.model, maxgeom=512)
-        self.handle = viewer.launch_passive(
-            self.model, self.data, key_callback=self._keys.put,
-            show_left_ui=False, show_right_ui=False,
-        )
+        # Pinned MuJoCo3.17 Linux adapter, as in VerticalViewer. The public
+        # passive handle only requests exit; own the thread to await native
+        # destruction before Python/GLFW shutdown or releasing model/data.
+        if sys.platform == 'darwin':
+            self._thread = None
+            self.handle = viewer.launch_passive(self.model, self.data,
+                key_callback=self._keys.put, show_left_ui=False, show_right_ui=False)
+        else:
+            handles = queue.Queue(1)
+            def launch():
+                try:
+                    viewer._launch_internal(model=self.model, data=self.data,
+                        run_physics_thread=False, handle_return=handles,
+                        key_callback=self._keys.put, show_left_ui=False, show_right_ui=False)
+                except BaseException as exc:
+                    handles.put_nowait(exc)
+            self._thread = threading.Thread(target=launch, name='myo-arm-viewer', daemon=False)
+            self._thread.start()
+            self.handle = handles.get()
+            if isinstance(self.handle, BaseException):
+                self._thread.join()
+                raise self.handle
         try:
             with self.handle.lock():
                 configure_camera(self.model, self.handle.cam)
                 configure_options(self.handle.opt, self.model)
             self.draw()
-        except Exception:
-            self.handle.close()
+        except BaseException:
+            self.close()
             raise
 
     def is_running(self) -> bool:
@@ -164,9 +190,12 @@ class DemoViewer:
             ):
                 state = self.env.telemetry()
                 target = state.get("requested_target_q", state["target_q"])
-                trigger = state["trigger"]
+                fixed_trigger = getattr(self, "fixed_trigger", None)
+                trigger = state["trigger"] if fixed_trigger is None else fixed_trigger
                 if key in (264, 265):  # GLFW down / up; no GUI import in helpers.
                     target += np.deg2rad(5.0) * (1 if key == 265 else -1)
+                elif fixed_trigger is not None:
+                    continue
                 elif key in (ord("+"), ord("="), 334):
                     trigger += 0.1
                 elif key in (ord("-"), 333):
@@ -195,7 +224,7 @@ class DemoViewer:
             )
         self.handle.set_texts(text_overlays(
             self.env, self.paused, self.color_mode, self.selected_muscle, self.stop_reason,
-            self.show_contacts,
+            self.show_contacts, self.fixed_trigger, self.controller_label,
         ))
         viewport = self.handle.viewport
         if viewport is not None and viewport.width >= 260 and viewport.height >= 160:
@@ -208,11 +237,14 @@ class DemoViewer:
 
     def close(self) -> None:
         self.handle.close()
+        if self._thread is not None:
+            self._thread.join()
 
 
 def render_frame(
     env, width: int = 960, height: int = 720, *,
     color_mode: str = "tissue", selected_muscle: int = 0, show_contacts: bool = False,
+    fixed_trigger: float | None = None, controller_label: str | None = None,
 ) -> np.ndarray:
     """Render the same scene/legend offscreen for visual QA (MUJOCO_GL=egl)."""
     model = copy.copy(env.model)
@@ -237,7 +269,8 @@ def render_frame(
         mujoco.mjr_render(viewport, scene, context)
         for font, position, text, values in text_overlays(
             env, color_mode=color_mode, selected_muscle=selected_muscle,
-            show_contacts=show_contacts,
+            show_contacts=show_contacts, fixed_trigger=fixed_trigger,
+            controller_label=controller_label,
         ):
             mujoco.mjr_overlay(font, position, viewport, text, values, context)
         if width >= 260 and height >= 160:

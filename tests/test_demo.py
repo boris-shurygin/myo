@@ -120,7 +120,8 @@ def test_fixed_pose_activation_changes_colors_without_moving_or_scaling_geometry
         env.close()
 
 
-def test_keyboard_commands_preserve_pose_and_delayed_muscle_state():
+@pytest.mark.parametrize('fixed_trigger', (None, 1.0))
+def test_keyboard_commands_preserve_pose_and_delayed_muscle_state(fixed_trigger):
     env = PreacherCurlEnv(PreacherCurlConfig(task_mode="interactive"))
     try:
         env.reset(seed=7)
@@ -129,6 +130,7 @@ def test_keyboard_commands_preserve_pose_and_delayed_muscle_state():
         initial_target = env.telemetry()["requested_target_q"]
         viewer = demo.DemoViewer.__new__(demo.DemoViewer)
         viewer.env = env
+        viewer.fixed_trigger = fixed_trigger
         viewer._keys = queue.SimpleQueue()
         viewer.paused = False
         viewer.color_mode = "activation"
@@ -139,7 +141,10 @@ def test_keyboard_commands_preserve_pose_and_delayed_muscle_state():
         assert not viewer.poll()
         command = env.telemetry()
         assert command["requested_target_q"] == pytest.approx(initial_target + np.deg2rad(5))
-        assert command["trigger"] == 0.0
+        assert command["trigger"] == (0.0 if fixed_trigger is None else fixed_trigger)
+        if fixed_trigger is not None:
+            help_text = '\n'.join(row[2] for row in demo.text_overlays(env, fixed_trigger=fixed_trigger))
+            assert 'Trigger fixed 100%' in help_text and '0 release' not in help_text
         assert viewer.paused and viewer.color_mode == "force" and viewer.selected_muscle == 1
         assert viewer.show_contacts
         options = mujoco.MjvOption()

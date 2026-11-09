@@ -1,5 +1,872 @@
 # Проверки проекта
 
+## Интерактивное PPO-демо руки — 2026-11-09
+
+[Запуск и клавиши](arm-interactive-demo.md). Launcher `scripts/demo_arm.sh`
+выбирает tested Python и прежний лучший none-controller
+`runs/arm_continuation/best.zip`; физика/observations/reward/веса не менялись.
+В этом позиционном viewer trigger фиксирован1, release/trigger keys выключены;
+generic viewer в остальных режимах сохраняет их. Ручные цели не перезаписываются
+автоматическим сценарием, если явно не указан `--scripted`.
+
+```bash
+.venv/bin/python3 -m pytest -q tests/test_demo.py tests/test_vertical_viewer.py
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q
+env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q \
+  tests/test_telemetry.py::test_command_receiver_ignores_old_episode_and_timeout_only_requests_relaxation
+env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  bash scripts/demo_arm.sh --seconds 3
+.venv/bin/python3 -m py_compile src/myo/demo.py scripts/demo_arm_preacher.py
+bash -n scripts/demo_arm.sh
+git diff --check
+```
+
+Targeted: **18 passed in0,86 s**. Старый keyboard-сценарий расширен fixed-trigger
+вариантом; регрессия ожидания native cleanup вертикального viewer дополнена
+рукой. Проверяются сохранение реальной физики при GUI-edits и блокирование
+`0` только в fixed-trigger режиме. Новых dynamics/schema тестов не добавлялось.
+Full suite: **181 passed,1 failed,6 warnings in63,70 s**. Единственный failed —
+создание UDP-сокета, запрещённое sandbox. Повтор этого теста вне sandbox:
+**1 passed in0,14 s**. Все182 проверки выполнены, это не один182-pass запуск.
+Compile, shell syntax и diff-check: exit0.
+
+На реальном X11 desktop `:1` проверены окно, отрисовка и программное закрытие
+через3 simulated seconds. Из sandbox X11 недоступен; GUI smoke выполнялся
+вне sandbox. Первый запуск выявил зависание после public passive-handle close;
+его тестовый процесс завершён и заменён исправленным запуском. Исправление:
+как в `VerticalViewer`, собственный render-thread вокруг pinned MuJoCo3.17
+`_launch_internal`, ожидание `join()` до освобождения model/data и завершения
+GLFW. **Повторный GUI smoke exit0**, без зависания и physical failure.
+
+Отдельный inline прогон через настоящий `DemoViewer.poll()` с очередью
+клавиш↑/↓ и фиксированным trigger выполнил75→20→105→45° по200 шагов.
+Команды`0/-/=` не изменили trigger1. Во всех800 шагах запрошенная цель
+оставалась ручной, **16 s без reset/failure**, с родной динамикой задержки
+и series elasticity. Tail RMSE: **0,527/1,496/2,745/0,101°**.
+Результат — ignored `runs/interactive_arm_demo/controls.json`.
+
+Через `MUJOCO_GL=egl`, существующие временные PIL dependencies
+(`PYTHONPATH=/tmp/myo-supervised-plot-deps`) и `myo.demo.render_frame`
+сняты реальные конечные позы каждого участка,1280×960:
+`runs/interactive_arm_demo/goal_{75,20,105,45}.png`. Кадры75° и105° просмотрены:
+кости, отдельные объёмы брюшек/сухожилий, нагрузка1 kg, числовые сигналы,
+цветовые шкалы и правильная fixed-trigger подсказка видны, текст не перекрывается.
+Это процедурное изображение, не UE/Flesh/skin. Физические клавиатурные события
+на X11 не инжектировались: управление проверено на callback-очереди и real env.
+
+## PPO с absent/old20/new60 признаками — 2026-11-09
+
+Протокол: [arm-anticipation-ppo.md](arm-anticipation-ppo.md).
+Новый policy/extractor и strict loader вынесены в отдельный модуль;
+source-pinned `arm_precision.py`, `arm_learning.py`, `arm_anticipation.py`
+и физика не менялись. Демо научилось строго загружать новый тип policy.
+
+```bash
+.venv/bin/python3 -m pytest -q tests/test_arm_feature_comparison.py
+taskset -c 6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q
+env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q \
+  tests/test_telemetry.py::test_command_receiver_ignores_old_episode_and_timeout_only_requests_relaxation
+.venv/bin/python3 -m py_compile src/myo/arm_feature_comparison.py \
+  scripts/compare_arm_anticipation_ppo.py scripts/report_arm_anticipation_ppo.py \
+  scripts/demo_arm_preacher.py
+git diff --check
+```
+
+Новый regression: **3 passed in3,38 s**, проверены сохранение mean/value и
+RMSprop moments при подключении предиктора, неизменность frozen-весов при
+изменении private-весов после PPO, roundtrip и запрет подмены frozen encoder.
+Полный suite: **179 passed,1 failed,6 warnings in60,02 s**.
+Единственный failed — создание UDP-сокета в sandbox: `PermissionError`.
+Этот тест повторён отдельно вне sandbox: **1 passed in0,23 s**.
+Таким образом, выполнены все180 проверок; это не один полный180-pass запуск.
+Compile/diff — exit0.
+
+Завершены три headless CPU-ветки на ядрах0/2/4 с одним Torch/BLAS потоком,
+общим родителем212992, LR3e−5, по65536 новых переходов.
+Все три начальные validation совпали точно: **1,3147004645660703°;9/9**.
+Test не использовался для выбора; все initial/best/last hashes совместно
+зафиксированы в `frozen_selection.json` до открытия test.
+
+Фактические train-команды (exit0):
+
+```bash
+taskset -c 0 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/compare_arm_anticipation_ppo.py train --kind none
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/compare_arm_anticipation_ppo.py train --kind old20
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/compare_arm_anticipation_ppo.py train --kind new60
+taskset -c 0 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/compare_arm_anticipation_ppo.py evaluate
+```
+
+Всего196608 новых переходов; `fixed_equal_budget`, не плато.
+Trainable parameters172941 во всех ветках; frozen parameters55700/55700/73748.
+SGD5000/4996/5043, у каждой2/64 KL-stop; wall с validation792,98/809,80/811,83 s.
+Best validation: none1,148°;9/9, old20 1,196°;9/9, new60 initial1,315°;9/9.
+Last validation:1,148°;9/9,1,202°;8/9,1,632°;8/9.
+Строгие загрузки и точный replay best/last validation прошли, frozen digest
+неизменен. Вся none validation-история и SGD точно воспроизвели прежний
+none_3e5 запуск. Общие начальные trainable weights и полные RMSprop states
+трёх веток дополнительно сравнены по именам параметров: равны.
+
+Best test: none**2,264°;8/11**, old20**2,125°;9/11**, new60**1,940°;10/11**,
+но последний — initial с нулевым readout предиктора, а не выученная польза.
+Last test: **2,264°;8/11 /2,144°;8/11 /2,709°;7/11**.
+Все без physical failures. New60-last не прошёл удержания120/130/15°
+и подъём60→125°, то есть4/5 движений; none/old20-best проходят5/5.
+Прежний демо-controller не заменён, GUI не открывался.
+
+Артефакты/веса/rollouts в ignored `runs/arm_anticipation_ppo/`.
+
+После выбора выполнены (exit0):
+
+```bash
+taskset -c 0 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl \
+  .venv/bin/python3 scripts/report_arm_anticipation_ppo.py --plot
+taskset -c 0 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/demo_arm_preacher.py \
+  --controller runs/arm_anticipation_ppo/new60/last.zip --seconds 16 --scripted \
+  --output runs/arm_anticipation_ppo/new60/demo.jsonl
+```
+
+Прежние временные matplotlib dependencies; пакеты проекта не менялись.
+График просмотрен; после уточнения легенды new60-best как initial/zero readout
+функция `plot` отдельно выполнена повторно, без повторного расчёта диагностики.
+На5400 train-only наблюдениях new60-last h→mean меняет excitation в среднем
+на0,00050; validation1,632°;8/9→1,791°;8/9, h→zero1,856°;7/9.
+Old20-best mean-ablation1,196→1,286° при сохранённых9/9.
+Замороженные признаки используются с небольшим эффектом, но это не означает
+превосходства над исходным parent или none-контролем.
+
+Все три selected-best исполнили16 s с75→20→105→45° без reset/failure.
+Настоящий CLI new60-last также исполнил16 s без failure;800 кадров v2,
+один run/episode, sequence0…799, шаг20 ms, physics1 ms и время непрерывны.
+Tail ошибки0,601/1,081/3,391/0,948°; full RMSE20,900° включает переходы.
+Финальный inline-аудит `evaluation_audit.json`: общие initial trainable
+weights/full optimizer states, все selection hashes,65536 переходов на ветку,
+побитовое совпадение **всей** none validation/SGD истории с прошлым запуском,
+непрерывность demo — passed. GUI не проверялся.
+
+## Увеличенный бюджет прямого предиктора60 ms — 2026-11-09
+
+Протокол до запуска: [arm-anticipation60-continuation.md](arm-anticipation60-continuation.md).
+Core-модули физики, наблюдений, reward и checkpoint schema не менялись.
+Новый runner использует прежний save/load с provenance продолжения.
+
+```bash
+.venv/bin/python3 -m pytest -q tests/test_arm_anticipation_resume.py tests/test_arm_anticipation.py
+.venv/bin/python3 -m py_compile scripts/continue_arm_anticipation.py scripts/compare_anticipation_budgets.py
+git diff --check
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/continue_arm_anticipation.py
+```
+
+Тесты: **5 passed in2,04 s**, включая конкретную регрессию resume:
+исходный и восстановленный Torch RNG, minibatch draws, полные RMSprop moments
+и веса после следующего update совпали точно. Compile/diff: exit0.
+Полный suite заново не запускался: формат/core не менялись, предыдущий полный
+прогон176 проверок описан ниже.
+
+Запущено продолжение150000→максимум450000, LR1e−4. Данные/normalization/sampling
+те же; референс progress восстановлен из прежней validation-истории.
+Завершено с exit0: **300000 дополнительных updates**, общий номер450000,
+best**448000**. Продолжение с validation574,43 s CPU.
+Остановка `maximum_updates`, не плато: последнее значимое улучшение448000.
+Train balanced MSE на фиксированных8192 окнах0,023055→0,005690,
+full validation balanced MSE0,027753→0,009601, уменьшение65,4%.
+
+После фиксации hash и строгого replay validation выполнены:
+
+```bash
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl \
+  .venv/bin/python3 scripts/report_arm_anticipation.py \
+  --root runs/arm_anticipation60_extended --diagnostics --plot
+.venv/bin/python3 scripts/compare_anticipation_budgets.py
+```
+
+Обе команды exit0, график просмотрен. Использованы прежние временные
+matplotlib dependencies, пакеты проекта не менялись.
+Test на тех же28710 окнах: угол**0,1559→0,1009°**, скорость**3,441→2,229°/s**;
+старый×3 по-прежнему0,1800°/3,999°/s. Повторный direct150k точно воспроизвёл
+все старые test-метрики, включая отдельные источники и20 каналов.
+
+В22 новых deterministic policy-эпизодах на неизменённых11 TEST_CASES и
+двух прежних controllers: none q/v0,2080°/5,597°/s→**0,0910°/3,081°/s**,
+frozen0,1827°/5,708°/s→**0,0699°/2,752°/s**. Identities controllers и
+persistence-метрики совпали точно с исходным опытом.
+В16 парах команд ошибка контраста q/v0,1137°/9,072°/s→0,0666°/6,353°/s;
+старый×3 всё ещё точнее по эффекту скорости3,367°/s.
+Нативные исходы/33 входа/команды32 ветвей совпали с исходными записями побитово.
+
+Финальный inline-аудит сохранён в `evaluation_audit.json`: initial parameters
+и полный RMSprop state/paramgroups совпали с родителем; mean/STD совпали
+с train-only пересчётом; selected hash, минимум/replay validation и
+parent/dataset hashes проверены. Optimizer step counters совпали:
+initial150000, best448000, last450000. Нормировки, данные и LR не менялись.
+Проверенные версии: torch2.15.0+cpu, stable-baselines3 2.9.2,
+MuJoCo3.17.0, NumPy2.5.4.
+
+Артефакты ignored: `runs/arm_anticipation60_extended/`.
+Новые test/probe/counterfactual labels не использовались в train или выборе best.
+PPO с новым encoder не обучался, demo controllers не изменены.
+
+## Прямой предиктор ощущений60 ms — 2026-11-09
+
+Протокол: [arm-anticipation60.md](arm-anticipation60.md).
+Новые standalone predictor/trainer/report; core физики и PPO не менялись.
+
+```bash
+.venv/bin/python3 -m pytest -q tests/test_arm_anticipation.py
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q
+env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q tests/test_telemetry.py::test_command_receiver_ignores_old_episode_and_timeout_only_requests_relaxation
+.venv/bin/python3 -m py_compile src/myo/arm_anticipation.py src/myo/train_arm_anticipation.py scripts/report_arm_anticipation.py
+git diff --check
+```
+
+Новые тесты: **4 passed in2,04 s**. Полный pytest в песочнице:
+**175 passed,1 failed,6 warnings in45,64 s**. Единственный failure —
+`PermissionError` создания localhost UDP-сокета в старом telemetry-тесте.
+Повтор именно этого теста вне сетевой песочницы: **1 passed in0,20 s**.
+Таким образом выполнены все176 проверок; полный suite целиком вне песочницы
+не перезапускался. Compile/diff: exit0.
+
+Обучение запущено локально, без новых зависимостей:
+
+```bash
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m myo.train_arm_anticipation
+```
+
+Данные124200 переходов/621 эпизод дали66726 train-окон,27522 validation-окон.
+Label60 —фактический третий следующий кадр, inputs33 только из текущего
+состояния и двух FIFO-команд; новая команда подаётся в голову после encoder.
+Проверены непрерывность физических каналов/FIFO и3 valid-перехода каждого окна.
+Нормировки получены только из train; старые dataset/checkpoints не меняются.
+Завершено с exit0: **150000 updates**, best150000, **335,22 s** CPU с validation.
+Train/validation balanced MSE на последнем шаге0,02306/0,02775;
+validation снизилась с1,55547. Остановка `maximum_updates`, не плато.
+Выбранный hash сохранён до test, строгий reload и replay validation совпали.
+Test28710 окон: direct q60/v60 **0,1559°/3,441°/s**, прежний one-step×3
+**0,1800°/3,999°/s**, persistence2,1650°/20,994°/s.
+Активации хуже прежнего ×3: RMSE0,00855–0,00956 против0,00132–0,00417.
+Поканальные значения и отношение ошибки к изменениям20/60 ms сохранены в отчёте.
+
+После фиксации best:
+
+```bash
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl \
+  .venv/bin/python3 scripts/report_arm_anticipation.py --diagnostics --plot
+```
+
+Exit0, график просмотрен. Использованы прежние временные matplotlib dependencies;
+пакеты проекта не менялись. В16 native-состояниях из8 test hold/ramp-эпизодов
+выполнены32 ветви с разными текущими командами. Переигранный префикс дал
+побитовое совпадение33 входов; input не конструировался из future labels.
+Ошибка контраста положения0,1137° против0,2051° у старого ×3; скорости
+9,072 против3,367°/s. RMS реального эффекта0,1852°/26,028°/s.
+Знак скорости верен во всех16 пробах у обеих моделей; это не проверка всего Jacobian.
+
+Дополнительно собраны22 новых deterministic policy-эпизода без обучения:
+11 TEST_CASES у none212992 и frozen_3e5 196608, по2178 forecast-окон.
+На none direct q/v0,2080°/5,597°/s против ×3 0,1248°/3,127°/s;
+на frozen —0,1827°/5,708°/s против0,0906°/1,947°/s.
+Польза нового представления для текущего управления не подтверждена.
+Новые probe/counterfactual labels в train не переносились; PPO не запускался.
+Финальный inline-аудит (`evaluation_audit.json`) подтвердил побитовое совпадение
+mean/STD с пересчётом только train delta60, неизменность выбранного hash и
+исходного dataset, минимум validation у best и одинаковые state_dict best/last.
+
+Версии: Python3.12, torch2.15.0+cpu, stable-baselines3 2.9.2, MuJoCo3.17.0,
+NumPy2.5.4. Все веса/labels/графики ignored в `runs/arm_anticipation60/`;
+прежние checkpoints, core dynamics/observations/reward и demo не менялись.
+
+## Frozen-предиктор и меньший LR — 2026-11-08
+
+Протокол до запуска: [arm-predictor-lower-lr.md](arm-predictor-lower-lr.md).
+Четыре продолжения по65536 новых переходов: none/frozen и LR1e−4/3e−5.
+Внутри пары один родитель, между парами родители разного уровня обучения.
+Core-модули физики/наблюдений/награды/сериализации не менялись.
+
+```bash
+.venv/bin/python3 -m pytest -q tests/test_arm_predictor_lr.py tests/test_arm_continuation.py tests/test_arm_conditioning.py
+.venv/bin/python3 -m py_compile scripts/compare_arm_predictor_lr.py scripts/report_arm_predictor_lr.py
+git diff --check
+```
+
+**5 passed in4,24 s**. Новый параметризованный тест проверяет сохранение weights
+и RMSprop moments при смене LR, schedule/paramgroups, строгую загрузку обоих
+форматов и сохранение нового LR при следующем update. В первом запуске два
+новых случая выявили отсутствие `set_env` в самом тесте после reload;
+после подключения возвращённой среды повторный запуск прошёл полностью.
+Compile и diff: exit0. Полный pytest не запускался.
+
+Четыре train-команды из протокола запущены локально на CPU2/4/6/8 с одним
+вычислительным потоком каждая. Frozen_3e5 перенесена с медленного CPU8 на CPU0
+через `taskset -apc 0 741356` без перезапуска процесса. Бюджет и выбор best не зависят от test.
+Все четыре процесса завершились с exit0 и `fixed_equal_budget`: по65536
+переходов, всего262144. Стартовые weights/buffers/RMSprop moments внутри
+каждой пары побитово одинаковы, кроме LR в paramgroups; physics/predictor
+identities совпадают. Это проверено отдельным inline-аудитом initial archives.
+На каждом validation-check predictor/head/normalization/gain оставались
+побитово неизменными; исходные архивы не менялись.
+Проверенные версии: torch2.15.0+cpu, stable-baselines3 2.9.2,
+MuJoCo3.17.0, NumPy2.5.4; обучение CPU, по одному потоку.
+
+После завершения обучения выполнены:
+
+```bash
+taskset -c 6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/compare_arm_predictor_lr.py evaluate
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl \
+  .venv/bin/python3 scripts/report_arm_predictor_lr.py --plot --diagnostics
+```
+
+Обе команды exit0. До test сохранены hashes initial/best/last всех четырёх веток.
+Строгие loaders проверили conditioning identity и LR; replay best/last validation
+совпал с записанным, rank best совпал с минимумом истории. Тестирование не меняло
+выбор моделей. График просмотрен; использованы прежние временные matplotlib
+dependencies, пакеты проекта не менялись.
+
+| Ветка | Best validation, °;pass | Best test, °;pass | Last test, °;pass | Новых SGD |
+| --- | --- | --- | --- | ---: |
+| none_1e4 | 1,315;9/9 | 1,940;10/11 | 3,603;4/11 | 752 |
+| none_3e5 | 1,148;9/9 | 2,264;8/11 | 2,264;8/11 | 5000 |
+| frozen_1e4 | 4,351;6/9 | 4,483;5/11 | 4,118;3/11 | 3862 |
+| frozen_3e5 | 1,635;7/9 | 3,492;5/11 | 3,492;5/11 | 5120 |
+
+Физических failures0. Ниже80 SGD на rollout получили63/64,2/64,25/64,0/64
+циклов соответственно. Все пять test-перемещений прошли у обеих none,
+три из пяти —у обеих frozen. У none_3e5 потеряны удержания30/130°;
+набор провалов frozen общий:15/30/120/130° и движения105→25°,60→125°.
+Сравнение относится к одному seed и знакомому test; разные родители не
+изолируют причинную пользу предиктора. Frozen_3e5 улучшался на последней
+проверке, поэтому бюджетная остановка не объявляется плато.
+
+Для всех четырёх best выполнена следующая команда с соответствующим trial
+(CPU0/2/4/6, каждый с OMP/OPENBLAS/MKL=1):
+
+```bash
+.venv/bin/python3 scripts/demo_arm_preacher.py \
+  --controller runs/arm_predictor_lr/frozen_3e5/best.zip --seconds 16 \
+  --output runs/arm_predictor_lr/frozen_3e5/demo_best.jsonl
+```
+
+Все четыре exit0, failure false. По800 v2-кадров, один episode, непрерывные
+sequence/время20 ms без reset; команды75/20/105/45° по4 s.
+Tail RMSE этих четырёх участков у frozen_3e5:0,219/0,309/2,102/2,019°;
+у none_3e5:0,081/1,137/2,133/1,482°. GUI не запускался.
+
+Feature-аудит использовал5400 общих исторических train-состояний. У frozen_3e5
+h1→mean меняет возбуждения в среднем на0,02613, validation1,635→1,870°,
+pass остаётся7/9; h1→zero —1,896°;7/9. Случайная перестановка векторов меняет
+возбуждения на0,03737, exact joint KL2,440. Это влияние, но не доказательство
+сильной полезности предобучения. Веса и buffers после вмешательств не менялись.
+Проверены также два stochastic streams на четырёх фиксированных заданиях:
+у frozen_3e5 mean20→75°0,219° против samples1,849/3,388°; зависимости успешного
+подъёма исключительно от sampling на этих пробах нет.
+
+Артефакты остаются ignored в `runs/arm_predictor_lr/`. Прежний demo checkpoint
+не заменён, код физики/награды и serialized contracts не менялись.
+
+## Продолжение руки с LR0,0001 — 2026-11-08
+
+Протокол и результаты: [arm-low-lr-continuation.md](arm-low-lr-continuation.md).
+Core-модули физики, наблюдений, награды и сериализации не менялись.
+Полный pytest в этом продолжении не запускался; выполнены два новых behavioral
+теста и проверки реального обучения, загрузки и исполнения.
+
+```bash
+.venv/bin/python3 -m pytest -q tests/test_arm_continuation.py
+.venv/bin/python3 -m py_compile scripts/continue_arm_precision.py scripts/report_arm_continuation.py
+git diff --check
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/continue_arm_precision.py
+taskset -c 6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl \
+  .venv/bin/python3 scripts/report_arm_continuation.py --measure-probes --plot
+.venv/bin/python3 scripts/demo_arm_preacher.py \
+  --controller runs/arm_continuation/best.zip --seconds 16 \
+  --output runs/arm_continuation/demo_best.jsonl
+```
+
+Тесты: **2 passed in2,95 s**. Они проверяют сохранение RNG/физического
+эпизода/весов/счётчика optimizer при stochastic-validation и отсутствие ложного
+прогресса от специализации на одной цели. Compile и diff: exit0.
+Для рисунка использованы ранее установленные временные matplotlib dependencies;
+зависимости проекта не менялись. Рисунок просмотрен.
+
+Обучение завершено с exit0, `validation_all_cases_passed`: родитель163840 →
+best212992, **49152 новых перехода,1410 SGD**,432,75 s с промежуточными проверками.
+Validation **4,233°;3/9 →1,315°;9/9**, equal-goal RMSE4,489→1,552°.
+Test после фиксации выбора: **4,002°;4/11 →1,940°;10/11**, failures0.
+Все пять test-перемещений прошли; единственный провал —15→15°,5,668°.
+Ни один прежний pass не потерян. Это успешная остановка для просмотра,
+не свидетельство плато или полного D1.
+
+Отдельной парной проверкой из одного checkpoint установлено точное совпадение
+одного `learn(2048)` и двух `learn(1024)` при `reset_num_timesteps=False`:
+все tensors policy, RMSprop state/paramgroups, Torch/NumPy RNG и native observation
+совпали, счётчик8131. Результат — `runs/arm_continuation/loop_equivalence.json`.
+Начальные tensors и полный optimizer state совпали с родителем; исходный архив
+не изменён. Строгие reload/replay прошли; best/balanced_best/last имеют одинаковые
+обученные параметры. Пробы использовали изолированный RNG и не выбирали модель.
+Четыре задания проб пересекаются с историческим test; независимым новым набором
+он не является.
+
+Непрерывное headless-демо16 s прошло без failure и reset:800 v2-кадров,20 ms,
+цели75/20/105/45° по4 s. Последняя секунда каждого участка имеет RMSE
+0,527/1,496/2,744/0,100°; полная RMSE с переходами21,60°.
+GUI не запускался. Артефакты остаются ignored в `runs/arm_continuation/`.
+
+## Проверка гипотез о плохом обучении руки — 2026-11-08
+
+Протокол и поэтапные выводы: [arm-hypotheses.md](arm-hypotheses.md).
+Core-модули динамики/observations/reward/serialization не менялись. Новый полный
+pytest не запускался: добавлены диагностические scripts и runner существующего
+PPO; проверены реальные переходы, updates и строгие reload ниже.
+
+```bash
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/check_arm_hypotheses.py gradient
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/check_arm_hypotheses.py concentration
+taskset -c 6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/check_arm_hypotheses.py critic
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/check_arm_exploration_duration.py
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/check_arm_exploration_duration.py --concentration-multiplier .2 --output runs/arm_hypotheses/exploration_wide.json
+```
+
+Все exit0. Gradient31,96 s:5 свежих1024-step rollout/update,80/12/4/17/1
+реальных SGD для initial none/none best/gain0,25/raw frozen/vertical best.
+Захвачены pre-clip norms actor/critic, необъяснённых обучаемых gradients нет,
+веса копий действительно менялись, исходные checkpoints не перезаписывались.
+В проверенных updates critic не доминирует>90% нормы; у gain0,25 median share10,3%.
+
+Concentration55,92 s:36 полных4-s эпизодов двух arm policy,3 задания,
+k4/16/64,2 streams. Условное среднее Beta сохранено на каждом шаге,
+model tensors неизменны. На frozen20→75° сужениеk16 вернуло ошибку≈51,7°;
+на опускании и другом подъёме точность, напротив, выросла.
+
+Critic137,44 s:32 независимых12-s stochastic-продолжения4 состояний,
+без failures. MC labels без bootstrap; V в начале20→75° ниже12-s MC
+примерно на0,49/0,55. Положительный остаток return после12 s≤0,0241.
+Дополнительно original native env и deepcopy после stochastic-prefix проверены
+на12 одинаковых последовательных действиях: observations/rewards/dones,
+q/qvel, активации, delayed excitation, fiber lengths/capacity совпали точно.
+Это независимый value-audit, а не доказательство причинного ущерба от critic.
+
+Исследование:12 native+12 wider эпизодов initial-policy, задержки/упругость
+сохранены. При исходном шуме20/100/200-ms holds ни одна из4 последовательностей
+не подняла руку выше старта. k0,2 с100/200-ms holds иногда дал21–24°, но ни одного
+достижения75°. При20-ms draw исходные trajectories совпали с прежним аудитом.
+
+```bash
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/resume_arm_budget_check.py
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/check_arm_update_drift.py
+```
+
+Оба exit0. Неизменённое продолжение:32768 дополнительных transitions,
+153 SGD,232,85 s обучения/validation. Родительские model tensors, полный RMSprop
+state, PPO scalars и contract совпали с continuation initial побитово; RNG/среда
+перезапущены seed0, это не bitwise resume исторического процесса. Best139264
+выбран до test:validation6,448°;4/9, test8,618°;3/11. Подъём20→75° достиг
+RMSE0,166°, но ряд верхних целей ухудшился; исходный test7,334°;2/11.
+Last test6,775°;2/11 не выбран заново.32/32 новых rollout с KL early stop.
+Best/last/initial строго загружены, initial private/optimizer count сохранены,
+native best-validation воспроизведена, parent SHA не изменился.
+
+Update drift:3 отдельных настоящих1024-step updates, исходные weights не
+перезаписаны. Whole-rollout exact KL после принятого первого шага none139264
+**0,08633**, при guard0,045; это допускается штатной SB3-проверкой без rollback.
+Для none131072 после12 принятых steps0,06822, gain0,25 после4 steps0,05815.
+Сценарии rollout содержали только цели15/35°, query-grid включал все27 train-пар.
+Snapshot none139264 с проверенным SHA сохранён только в ignored runs.
+
+```bash
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/resume_arm_budget_check.py --root runs/arm_hypotheses/lr_1e4_none --learning-rate .0001
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/resume_arm_budget_check.py --root runs/arm_hypotheses/order_none --case-order round_robin
+taskset -c 6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/check_arm_update_drift.py --model none_low_lr --output runs/arm_hypotheses/update_drift_lr.json
+```
+
+Все exit0. Раздельные контроли LR/порядка заданий завершены из одного none131072:
+оба32768 новых transitions,1997/681 SGD,328,91/320,76 s обучения с validation.
+Сохранены initial tensors и полный RMSprop moments; scalars/groups отличаются
+только заданным LR, у order — только последовательность27 тех же пар.
+KL-stop11/32 у LR против29/32 у order и32/32 у неизменённого продолжения.
+LR best163840:validation4,233°;3/9,test4,002°;4/11. Order best139264:
+validation5,940°;2/9,test5,122°;3/11;last7,871°;2/11. Каждый best выбран
+и frozen до собственного test; native validation точно воспроизведена,
+parent SHA и strict reload проверены. Новый default не выбирали по test.
+
+Matched low-LR update: exact KL1-го шага0,00458 вместо0,04436 при прежнем LR;
+после80 принятых steps0,00564 на rollout и0,02384 на query-grid.
+Уменьшился разовый policy drift; гарантии сохранения всех целей нет.
+
+```bash
+env PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl .venv/bin/python3 scripts/plot_arm_hypotheses.py
+.venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_hypotheses/lr_1e4_none/best.zip --seconds 16 --output runs/arm_hypotheses/lr_1e4_none/demo_best.jsonl
+.venv/bin/python3 -m py_compile scripts/check_arm_hypotheses.py scripts/check_arm_exploration_duration.py scripts/check_arm_update_drift.py scripts/resume_arm_budget_check.py scripts/plot_arm_hypotheses.py
+git diff --check
+```
+
+Все exit0. График `runs/arm_hypotheses/hypotheses.png` осмотрен, SVG рядом.
+Headless LR-demo16 s без failure:full RMSE22,641°, tail по75/20/105/45°
+3,300/0,345/3,243/1,978°.800 последовательных v2-кадров, один episode,
+20-ms timestep без reset; final minimum capacity proxy0,9648. Отдельные test
+всё ещё не освоены, release не обучен; GUI не открывался. Все новые weights,
+snapshots, rollout и графики остались в ignored runs; Untitled.ipynb не менялся.
+
+## Диагностика переноса PPO со стенда на руку — 2026-11-08
+
+Отчёт: [arm-learning-bottlenecks.md](arm-learning-bottlenecks.md).
+Физика, reward, наблюдения, checkpoint contracts и веса не менялись;
+новые файлы — только read-only diagnostics и документация. Новое обучение
+и дополнительный полный pytest не запускались; прежний результат168 passed
+из раздела ниже относится к предыдущему изменению.
+
+```bash
+.venv/bin/python3 scripts/audit_arm_learning_bottlenecks.py
+.venv/bin/python3 scripts/audit_arm_execution_gap.py
+.venv/bin/python3 scripts/audit_arm_vertical_transfer.py
+.venv/bin/python3 scripts/audit_arm_learning_bottlenecks.py --output runs/arm_bottlenecks/audit_verified.json
+env PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl .venv/bin/python3 scripts/audit_arm_execution_gap.py --plot-only
+.venv/bin/python3 -m py_compile scripts/audit_arm_learning_bottlenecks.py scripts/audit_arm_execution_gap.py scripts/audit_arm_vertical_transfer.py
+git diff --check
+```
+
+Все exit0. Первый audit86,08 s, повтор90,03 s; результаты45 исполнений,
+24 ветвей/контролей,63 целевых проб и5 initial vertical эпизодов совпали точно.
+Добавленные assert проверяют trigger1/нулевой excess cost, общий q/v в1 s
+у21 native/импульсной ветви и telescoping identity приλ1. Совместно с двумя
+остальными audits —82 полных arm эпизода,35 vertical и3 коротких arm прохода40 ms,
+без failures; повтор первого набора учитывается отдельно. Строгие загрузки,
+неизменность model tensors и SHA checkpoints проверены. Все генерации в ignored
+`runs/arm_bottlenecks/`; `Untitled.ipynb` не изменён.
+
+Frozen gain0,25 best20→75°: mean tail RMSE53,00°, stochastic14,08–16,26°
+в4 диагностических seeds; это разные samples, не новые обучения. Native mean
+останавливается около22°;200-ms усиление сгибателей на0,1 после1 s переводит
+к84,33° и RMSE9,33°. Из6 стартов20–30° при цели75° итог≈22°, из35/45°≈84,36°.
+На других заданиях stochastic также может быть хуже deterministic, успешной
+универсальной policy не заявляем. Вертикальные successful checkpoints тоже
+имеют mean/sample разрыв, чаще с лучшим mean исполнением на проверенных задачах.
+
+У vertical reset балансирует нагрузку с residual force<1e−8 N; у arm03-start
+остаток без constraints−3,02/−5,20/−3,40 Nm на20/75/125°. Новая команда не влияет
+на падение в первые40 ms. В offline реконструкции5 реальных последовательностей
+закон активации15/50 ms+FIFO40 ms совпал с native activation до6,2e−16;
+симметричный15/15-ms фильтр применён только к записи, механика руки не менялась.
+У18 парных импульсов Δreturn и ΔGAE положительны; это замороженный critic-probe
+на изменённых траекториях, не повтор исторических on-policy advantages.
+График `execution_gap.png` осмотрен; SVG сохранён рядом. GUI не открывался.
+
+## Чтение h и глубина после concat — 2026-11-08
+
+Протокол: [arm-predictor-readout-and-depth.md](arm-predictor-readout-and-depth.md).
+
+```bash
+.venv/bin/python3 scripts/audit_arm_scale_equivalence.py
+.venv/bin/python3 scripts/audit_arm_scale_equivalence.py --output runs/arm_conditioning/scale_equivalence_moments.json
+.venv/bin/python3 -m pytest -q tests/test_arm_depth.py tests/test_arm_conditioning.py
+taskset -c 8,9 .venv/bin/python3 -m pytest -q
+.venv/bin/python3 -m py_compile src/myo/arm_depth.py src/myo/train_arm_depth.py src/myo/train_arm_conditioning.py scripts/report_arm_depth.py scripts/demo_arm_preacher.py scripts/audit_arm_scale_equivalence.py
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 -m myo.train_arm_depth train
+```
+
+Scale audit exit0: на5400 состояниях `h*0,25` и соответствующий блок weights*4
+сохранили prediction20, action parameters12 и V **с max abs difference0,0**.
+Проверены initial/best gain1 и gain0,25; сохранённые веса не менялись.
+Это проверка функциональной эквивалентности, не успешности обучения readout.
+Дополнительный moments audit exit0: RMS вклада h=2,401, centered RMS1,806;
+private0,486/0,199. После gain0,25 initial centered ratio≈2,3 вместо≈9,1.
+Данные относятся к общему5400-state batch, не к каждому распределению новых PPO.
+
+Целевые: **2 passed,2,76 s**. Полный набор с прежним локальным UDP-тестом:
+**168 passed,6 прежних warnings,91,96 s**. Защищены включение новых слоёв в
+optimizer, реальные изменения новых actor/critic weights после PPO-update,
+неизменность predictor, совпадение общих исходных weights/RNG с двухслойной
+веткой, восстановление RMSprop и отказ при несовместимой depth identity.
+Compile exit0. Новый PPO завершил **131072 перехода,3662 optimizer steps,
+106/128 KL-stop,1350,08 s**, stop maximum_transitions. С контролем совпали
+все общие исходные tensors, Torch RNG, predictor/PPO/physical identities.
+Изменились только post-concat слои и их depth identity; дополнительных
+обучаемых параметров66048, всего PPO238989.
+
+```bash
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 -m myo.train_arm_depth evaluate
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_depth/best.zip --seconds 16 --output runs/arm_depth/demo_best.jsonl
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl .venv/bin/python3 scripts/report_arm_depth.py --plot --audit-features
+```
+
+Все exit0. Best98304: validation28,066°;1/9 (105→105°), test **33,856°;1/11**
+(15→15°). Last test30,865°;2/11 (15→15°,120→120°). Оба test без failures;
+best selection зафиксирован до test, predictor encoder/head/normalization frozen
+проверены побитово, native validation воспроизведён. Нового best по test нет.
+Контроль2×128:10,400°;2/11; увеличение глубины при прежнем PPO не улучшило результат.
+Непрерывное демо16 s без failure:full RMSE55,552°,capacity proxy0,9791,
+800 последовательных v2-кадров без reset. Проверены timestamps/sequence;
+полезного непрерывного движения пока нет. Feature audit на прежних5400 состояниях:
+mean-|Δu|0,03103/0,04108 для mean/shuffle h, веса не менялись.
+График `runs/arm_depth/depth.png` осмотрен; `.svg`, JSON-таблицы и traces
+сохранены рядом. GUI/другие seeds/backends не проверялись.
+
+## Learning rate и масштаб h1 MyoArm — 2026-11-08
+
+Протокол: [arm-ppo-conditioning.md](arm-ppo-conditioning.md).
+Старые core-модули с закреплёнными hashes и checkpoints не переписаны.
+
+```bash
+.venv/bin/python3 -m pytest -q tests/test_arm_conditioning.py
+taskset -c 8,9 .venv/bin/python3 -m pytest -q
+.venv/bin/python3 -m py_compile src/myo/arm_conditioning.py src/myo/train_arm_conditioning.py scripts/demo_arm_preacher.py
+.venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_conditioning/gain_025/initial.zip --seconds 0.2
+```
+
+Целевой: **1 passed,2,13 s**. Полный набор, с разрешённым прежним локальным
+UDP-тестом: **167 passed,6 прежних warnings,125,73 s** одновременно с тремя
+новыми PPO на отдельных CPU. Проверены одинаковые trainable weights,
+тождественность gain1 исходной policy, точное применение gain0,25, заморозка
+предиктора после PPO-update, сохранение/загрузка масштаба и отказ при расхождении
+gain с metadata. Compile exit0. Начальный headless demo0,2 s без failure;
+это проверка загрузки/исполнения, не качества управления.
+
+```bash
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 -m myo.train_arm_conditioning train --trial lr_1e4
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 -m myo.train_arm_conditioning train --trial lr_3e5
+taskset -c 6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 -m myo.train_arm_conditioning train --trial gain_025
+```
+
+Обучение завершено: lr1e−4 **131072 перехода,10227 optimizer steps,1640,1 s**,
+1/128 KL-stop; lr3e−5 **65536,5120,965,8 s**,0/64 KL-stop, stop validation
+plateau по прежнему критерию; gain0,25 **131072,5829,1624,3 s**,85/128 KL-stop.
+Остальные остановлены по бюджету, не по сходимости. Запуски выполнялись
+одновременно на отдельных CPU; wall-clock не является чистым CPU-бенчмарком.
+
+```bash
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 -m myo.train_arm_conditioning evaluate
+taskset -c 0 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_conditioning/lr_1e4/best.zip --seconds 16 --output runs/arm_conditioning/lr_1e4/demo_best.jsonl
+taskset -c 4 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_conditioning/lr_3e5/best.zip --seconds 16 --output runs/arm_conditioning/lr_3e5/demo_best.jsonl
+taskset -c 6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_conditioning/gain_025/best.zip --seconds 16 --output runs/arm_conditioning/gain_025/demo_best.jsonl
+taskset -c 2 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl .venv/bin/python3 scripts/report_arm_conditioning.py --plot --audit-features
+```
+
+Все exit0. Selections зафиксированы до test, native validation воспроизведён,
+проверены strict loading и frozen encoder/head/mean/std, исходные trainable weights
+и Torch RNG. Test best: lr1e−4 **32,547°;0/11**, lr3e−5 **56,944°;1/11**
+(только15→15°), gain0,25 **10,400°;2/11** (75→20°,25→105°).
+Последний вариант улучшил исходный frozen29,643°;0/11, но не baseline без h1
+7,334°;2/11. Все непрерывные демо16 s без failure, по800 v2-кадров без reset,
+последовательные timestamps/sequence; ошибки52,453/55,944/50,430° соответственно.
+Хорошего непрерывного управления пока нет. График `conditioning.png` осмотрен;
+JSON-проверки, таблицы по параметрам/сценариям и проверки использования/масштабов
+ветвей сохранены в ignored `runs/arm_conditioning/`. Нового test-бенчмарка,
+проверки других seeds, GPU или GUI этот опыт не устанавливает.
+
+## Использование признаков предиктора руки — 2026-11-08
+
+```bash
+.venv/bin/python3 -m py_compile scripts/audit_arm_predictor_features.py
+.venv/bin/python3 scripts/audit_arm_predictor_features.py
+```
+
+Оба exit0. Без обучения: 5400 одинаковых состояний, best/last и none-control;
+mean/shuffle/zero подмены только h1, raw-входы сохранены. Проверены совпадение
+ручной композиции actor/critic с production policy, нулевая реакция none-control,
+неизменность weights/buffers/hash. Native validation воспроизведён с atol1e−5°.
+54 headless-эпизода (10800 переходов),0 physical failures: best original/mean/zero
+11,503/43,359/19,821° и3/0/1 pass; last13,849/9,152/12,131° и0/3/0 pass.
+Полный отчёт — [arm-balanced-predictor.md](arm-balanced-predictor.md#проверка-использования-признаков--2026-11-08),
+числа/идентичности/результаты по сценариям — ignored
+`runs/arm_preacher_balanced/feature_use_audit.json`.
+Признаки используются, польза зависит от checkpoint. Test, selection, физика,
+reward и checkpoint contracts не менялись; полный pytest для этого отдельного
+диагностического скрипта не повторялся.
+
+## Расширенный набор предиктора руки — 2026-11-08
+
+Протокол: [arm-balanced-predictor.md](arm-balanced-predictor.md).
+Добавлены независимые capacity/амплитуды, feedback-пробы удержания/движения,
+быстрые возмущения и causal sampling по состояниям. Исходные physical/observation/
+reward/checkpoint модули и старые weights не менялись.
+
+```bash
+taskset -c 4 .venv/bin/python3 -m pytest -q tests/test_arm_balanced.py
+taskset -c 6,7 .venv/bin/python3 -m pytest -q
+taskset -c 2,4,8 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python3 -m myo.train_arm_balanced collect --workers 3
+.venv/bin/python3 -m py_compile src/myo/arm_balanced.py src/myo/train_arm_balanced.py scripts/report_arm_balanced.py
+```
+
+Целевые: **2 passed,1,83 s**; полный pytest вне sandbox для прежнего локального
+UDP-теста: **166 passed,6 прежних warnings,52,58 s**. Проверены реальное
+удержание 80° без фиксации сустава, полное произведение capacity/предела возбуждения
+и повышение веса редких средних положений без удаления распространённых.
+Compile: exit0. Сбор завершён: **621 эпизод,124200 переходов,0 failures**,
+67400/27800/29000 train/validation/test,285,08 s wall-clock на 3 локальных workers.
+Data audit подтвердил конечность массивов и побитовую непрерывность физических
+состояний/FIFO внутри эпизода; изменение внешней цели не считается reset.
+Train30–120°:39,54% вместо 10,56%; middle/slow6939 кадров вместо 59,
+максимальная непрерывная последовательность 3,64 s вместо 0,08 s.
+
+```bash
+taskset -c 6,7 .venv/bin/python3 -m myo.train_arm_balanced predictor --threads 2
+taskset -c 4 env PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl .venv/bin/python3 scripts/report_arm_balanced.py
+taskset -c 4 .venv/bin/python3 -m myo.train_arm_balanced train
+```
+
+Predictor exit0: **78000 дополнительных updates**, best66000, stop validation
+plateau,143,58 s wall-clock. Новый общий test q20/v20:0,0541°/2,746°/s
+против старых 0,2148°/7,499°/s на тех же эпизодах. На новых policy-test прогонах:
+**0,0748°/3,452°/s** против **0,2891°/10,390°/s**; q60 **0,2124°** против 0,9416°.
+Прежний motor-test не ухудшился: q20 0,0459° против 0,0488°.
+
+Initial predictor совпадает с прежним best побитово; mean/STD сохранены.
+Новый PPO initial содержит точно selected encoder/head/normalization.
+Private weights, initial Torch RNG, PPO settings и task contract совпали с
+прежними none/frozen. Проверки exit0, `initialization_audit.json`:passed.
+PPO завершён: **131072 перехода,1122,50 s wall-clock,4107 actual optimizer steps**,
+stop maximum_transitions, не convergence. Best122880: validation11,503°;3/9,
+все три прохода для цели 75°. Test best **29,643°;0/11**; last **21,430°;1/11**.
+Test не использован для изменения selection. Улучшения управления против старого
+baseline не получено; выявлен перевес цели 75° в validation-критерии.
+
+```bash
+taskset -c 4 .venv/bin/python3 -m myo.train_arm_balanced evaluate
+taskset -c 2 .venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_preacher_balanced/frozen/best.zip --seconds 16 --output runs/arm_preacher_balanced/demo_best.jsonl
+taskset -c 6 .venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_preacher_balanced/frozen/last.zip --seconds 16 --output runs/arm_preacher_balanced/demo_last.jsonl
+taskset -c 4 .venv/bin/python3 scripts/probe_balanced_arm_policy.py
+taskset -c 6 env PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl .venv/bin/python3 scripts/report_arm_balanced.py
+```
+
+Все команды exit0. `evaluation_audit.json`:passed —3 strict loads, точное
+воспроизведение selected validation, правильный ранг, frozen predictor weights
+и нормировка совпадают побитово от initial до last; настройки/инициализация
+совпали с предыдущими запусками. На 5400 новых stochastic-состояниях выбранного
+контроллера новый/старый предикторы: q20 **0,0844/0,3685°**, v20 **3,186/12,578°/s**,
+q60 **0,2420/1,2028°**;0 failures, эти данные не дообучают предиктор.
+
+Headless demo best/last:16 s, без termination/reset, full RMSE51,753/37,937°,
+final min capacity proxy0,9605/0,9704. Проверены по 800 v2 кадров, непрерывные
+20-ms timestamps и один episode. Release/protection и интерактивный GUI не проверялись.
+Графики comparison/movement сгенерированы и просмотрены. После полного pytest
+семантика core-модулей не менялась; добавлены только отчёты/диагностические scripts
+и уточнён комментарий к pending-команде в новом sampler.
+
+## Покрытие motor-пробами состояний PPO руки — 2026-11-07
+
+Отчёт: [arm-predictor-movement-coverage.md](arm-predictor-movement-coverage.md).
+Повторного обучения нет. Физика, наблюдения, награда, serialization и веса
+не менялись; новый скрипт только собирает и анализирует диагностические траектории.
+
+```bash
+taskset -c 4 env PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl .venv/bin/python3 scripts/compare_arm_movement_coverage.py
+taskset -c 4 env PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl .venv/bin/python3 scripts/compare_arm_movement_coverage.py --reuse
+.venv/bin/python3 -m py_compile scripts/compare_arm_movement_coverage.py
+```
+
+Сбор/анализ exit0. Исходный motor-train 12800 кадров; новые stochastic-срезы
+initial/none-best/frozen-best по 27 TRAIN_CASES, по 5400 кадров, по 0 failures.
+Это новые прогоны, не сохранённые исторические rollout обучения PPO.
+Строгие loader сверили source/config/checkpoint identities; `--reuse` проверил
+совпадение выбранных checkpoint с записанными identities.
+
+Motor train: ниже 30°81,62%, в 30–120°10,56%; средняя область с |v|≤5°/s:
+59 кадров, максимальная последовательность 80 ms, ни одной≥500 ms.
+PPO none/frozen: в 30–120°57,74/57,26%; median |Δu| за 20 ms 0,05807/0,05778
+против 0,00163 в motor train. Подтверждена связка initial capacity/limit в исходных
+эпизодах: (1,.06),(0.8,.12),(1,.24),(0.8,.4), по 16 train-эпизодов.
+
+Предиктор неизменен. Motor-test q20/v20 повторены: 0,04877°/3,536°/s;
+новые PPO none/frozen: 0,3061/0,3262° и 10,403/10,957°/s. Ошибка остаётся выше
+внутри общей области 30–120°, поэтому разница углов объясняет сдвиг не полностью.
+Сгенерированы и просмотрены distributions/trajectories; полный JSON и npz в
+ignored `runs/arm_preacher/movement_coverage/`. Pytest не повторялся: core-код
+со времени полного 164-passed прогона не менялся.
+
+Дополнительные локальные Python-проверки: exit0. Сверены все 27 case и config
+identities, 16200 конечных допустимых переходов, побитовая непрерывность соседних
+кадров внутри эпизода, по5346 окон горизонта3 без переходов через reset,
+совпадение motor-test метрик с исходным training.json с допуском1e−5,
+конечность массивов и относительные ссылки документации. `git diff --check`: exit0.
+
+## Возобновление обучения MyoArm на скамье Скотта — 2026-11-07
+
+Протокол: [arm-preacher-training.md](arm-preacher-training.md).
+Фактические команды:
+
+```bash
+taskset -c 6 .venv/bin/python3 -m pytest -q tests/test_arm_precision.py
+taskset -c 6,7 .venv/bin/python3 -m pytest -q
+taskset -c 2 .venv/bin/python3 -m myo.train_arm_precision collect
+taskset -c 6,8 .venv/bin/python3 -m myo.train_arm_precision predictor --threads 2
+taskset -c 4 .venv/bin/python3 -m myo.train_arm_precision train --trial none
+```
+
+Целевые: **3 passed, 2,32 s**. Полный pytest вне sandbox для прежнего UDP-теста:
+**164 passed, 6 прежних warnings, 54,70 s**. Native-переходы нового wrapper побитово
+совпадают с исходной средой; моторная очередь сжимается без потери порядка.
+Проверены причинность предиктора, split по эпизодам, frozen weights, embedded
+identity и следующий одинаковый RMSprop-step после загрузки.
+
+Feasibility: 8 нативных проходов эвристики по 4 s, без физической помощи.
+20→75 и 75→20: steady RMSE 0,415/0,437°;90→135:0,371°.
+90→150 остановился на 141,722° с contact peak 16,306 N; не объявлен достижимым.
+`heuristic_feasibility.json` и его числа приведены в протоколе.
+
+Collection exit0: **112 эпизодов,22400 переходов,0 failures**,64/24/24 эпизода
+по train/validation/test;12800/4800/4800 переходов. Сбор 168,56 s wall-clock
+вместе с параллельными тестами/обучением, не изолированный performance benchmark.
+Predictor завершён: **27500 updates**, stop по заданному validation plateau,
+best 21500,70,41 s wall-clock. Held-out test: q20/q60 RMSE **0,04877/0,22094°**,
+v20/v60 **3,536/5,705°/s**. Persistence: q20/q60 **0,9844/2,9315°**,
+v20/v60 **10,363/24,861°/s**. Train-данные не используют эвристику или цели.
+Запущена frozen-ветвь:
+
+```bash
+taskset -c 2 .venv/bin/python3 -m myo.train_arm_precision train --trial frozen
+```
+
+Initial private weights и начальное состояние Torch RNG совпали у none/frozen;
+предиктор не переобучается по их PPO-rollout. Обе PPO-ветви завершены по бюджету
+**131072 перехода**, не по плато: none 1404,61 s, frozen 1398,06 s wall-clock
+(частично параллельные процессы). Actual optimizer steps 6074/5729.
+
+```bash
+taskset -c 4 .venv/bin/python3 -m myo.train_arm_precision evaluate
+taskset -c 2 .venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_preacher/none/best.zip --seconds 16 --output runs/arm_preacher/demo_none.jsonl
+taskset -c 6 .venv/bin/python3 scripts/demo_arm_preacher.py --controller runs/arm_preacher/frozen/best.zip --seconds 16 --output runs/arm_preacher/demo_frozen.jsonl
+taskset -c 4 env PYTHONPATH=/tmp/myo-supervised-plot-deps MPLCONFIGDIR=/tmp/myo-supervised-mpl .venv/bin/python3 scripts/report_arm_preacher.py
+.venv/bin/python3 -m py_compile scripts/demo_arm_preacher.py scripts/report_arm_preacher.py
+```
+
+Все перечисленные прогоны exit0. Best выбран по validation до открытия test:
+none 131072, frozen 90112. Validation **8,374°;2/9** против **29,408°;1/9**;
+test best **7,334°;2/11** против **28,085°;1/11**; test last 7,334°;2/11
+против 27,845°;1/11. Знакомые опорные пары выделены в отчёте; без них новые
+test-пары: **7,368°;2/9** против **27,659°;0/9**. Успех none —75→20° и 25→105°;
+frozen прошёл только знакомое 15→15°. Независимая эвристика прошла 9/9 validation,
+средний tail RMSE 0,215°, не используется как teacher.
+
+`evaluation_audit.json`: **passed**, 6 строгих загрузок initial/best/last,
+побитово неизменные predictor encoder/head/normalization у обеих ветвей,
+точное воспроизведение selected validation и проверка его ранга.
+16-s demo headless: full RMSE 34,832/56,263°, без termination, final min capacity
+proxy 0,9702/0,9768. По 800 v2-пакетов, sequence 0…799, один episode, непрерывные
+20-ms timestamps. Это не проверка release/protection и не успешная приёмка D1.
+
+Графики comparison/movement сгенерированы и просмотрены. EGL offscreen через
+существующий `myo.demo.render_frame`: none 35→95°, конец 97,45°, кадр
+`runs/arm_preacher/none_validation_pose.png` просмотрен; интерактивный GUI
+не запускался. После полного pytest менялись только helper scripts/документация;
+код динамики/награды/наблюдений/сериализации с того момента не менялся.
+
 ## План параллельной работы десктоп/ноутбук — 2026-11-07
 
 Добавлен [план Unreal-демо скамьи Скотта](desktop-unreal-preacher-plan.md).

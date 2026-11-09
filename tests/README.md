@@ -1,5 +1,47 @@
 # Минимально полезный набор проверок
 
+`test_arm_anticipation_resume.py` проверяет продолжение standalone-предиктора:
+восстановление последовательности minibatch-выборок и Torch RNG, полных RMSprop
+moments и точное совпадение следующего обновления с непрерывным обучением.
+
+`test_arm_anticipation.py` защищает реальный тайминг горизонта60 ms: текущая
+команда влияет после40 ms, следующие выданные команды ещё не влияют.
+Проверяются labels без перехода через reset/failed transition, входы без
+будущих команд, отделение новой команды от encoder и строгий horizon/input
+contract checkpoint с сохранением нормировок. Это не тест качества прогноза.
+
+`test_arm_predictor_lr.py` проверяет, что уменьшение LR при продолжении сохраняет
+RMSprop moments и веса, переживает reload и следующий PPO-update, а frozen h1
+сохраняет согласованную conditioning identity. Это защита от несовпадения
+LR в schedule, optimizer и metadata; результат движения оценивается отдельно.
+
+`test_arm_continuation.py` проверяет, что stochastic validation не расходует
+RNG обучения и не меняет его физический эпизод/веса/optimizer counter; также
+защищает критерий продолжения от известной специализации на75° с ухудшением
+ошибки при равном весе целей. Протокол —
+[arm-low-lr-continuation.md](../docs/arm-low-lr-continuation.md).
+
+`test_arm_depth.py` проверяет риск добавления слоёв после создания optimizer:
+новые параметры действительно включены в RMSprop и обучаются, продолжаются
+после загрузки, а predictor остаётся frozen. Общие исходные tensors/RNG совпадают
+с двухслойным контролем; loader проверяет отдельную depth identity.
+
+`test_arm_conditioning.py` защищает конкретный риск опыта с масштабом frozen-h1:
+gain не теряется при сохранении/загрузке, не меняет предиктор и не нарушает
+исходную инициализацию. Сравнение реального управления выполняется отдельно в
+[arm-ppo-conditioning.md](../docs/arm-ppo-conditioning.md).
+
+Для расширенного набора руки проверяются две найденные проблемы: независимые
+capacity/амплитуды вместо связанных пар, а также реальные промежуточные удержания
+и повышение веса редких состояний при sampling. Физические переходы и контракт
+предиктора остаются прежними; протокол — [arm-balanced-predictor.md](../docs/arm-balanced-predictor.md).
+
+Для нового MyoArm PPO проверяются 153-канальные наблюдения, сжатие двух моторных
+блоков без изменения native q/qvel/мышц, отсутствие цели/истории во входе
+предиктора, whole-episode окна, причинный 40-ms путь команды, одинаковые private weights,
+неизменность frozen encoder, self-contained policy и точное продолжение RMSprop.
+Протокол — [arm-preacher-training.md](../docs/arm-preacher-training.md).
+
 Для отдельного предиктора на моторных пробах проверяются labels без перехода
 через reset, whole-episode окна, точное native-воспроизведение, плавные
 воспроизводимые команды, сохранение текущей архитектуры и train-only
@@ -258,6 +300,17 @@ train-only замороженную нормировку, точный отка�
 Протокол/результаты — [shared-encoder-ppo.md](../docs/shared-encoder-ppo.md).
 
 ## Перенос предобученного предиктора
+
+После реального зависания arm GUI при завершении
+`test_vertical_viewer.py` проверяет ожидание native cleanup и независимость
+display-state для обоих viewer — вертикального и руки. Keyboard-сценарий
+в `test_demo.py` проверяет также fixed-trigger режим позиционного PPO-демо.
+
+`test_arm_feature_comparison.py` проверяет подключение old20/new60 либо нулевой
+ветви к одному обученному arm-parent: сохранение начальных команд/value и
+optimizer moments, неизменность frozen predictor при PPO, strict roundtrip
+и отказ при подмене encoder. Это регрессии честного warm-start сравнения,
+а не доказательство полезности представления для управления.
 
 `test_pretrained_vertical.py` проверяет конкретные риски переноса: одинаковые
 private weights, сохранение train-нормировки, отсутствие обновлений в frozen,
