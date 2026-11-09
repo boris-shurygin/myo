@@ -31,7 +31,7 @@ def archive_identity(path):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--roots',type=Path,nargs='+',required=True)
-    p.add_argument('--kind',choices=('mass','circle','joint'),default='mass')
+    p.add_argument('--kind',choices=('mass','circle','hold_joint','joint'),default='mass')
     p.add_argument('--workers',type=int,choices=(1,2,4),default=4)
     p.add_argument('--long',action='store_true')
     args=p.parse_args();torch.set_num_threads(1)
@@ -51,6 +51,9 @@ def main():
         conditions=scenarios(TEST_CASES,masses=(.75,1.5,2.5))
     elif args.kind=='circle':
         conditions=scenarios(((q,q) for q in (30,60,90,120)),tilts=(45.,105.,165.,225.,285.,345.))
+    elif args.kind=='hold_joint':
+        conditions=scenarios(((q,q) for q in (30,60,90,120)),masses=(.75,1.5,2.),
+                             tilts=(45.,105.,165.,225.,285.,345.))
     else:
         conditions=[]
         for i,case in enumerate(TEST_CASES):

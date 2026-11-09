@@ -87,7 +87,14 @@ def train(args):
     if args.masses is not None:overrides['masses']=tuple(args.masses)
     if args.tilts is not None:overrides['tilts']=tuple(args.tilts)
     if args.capacities is not None:overrides['capacities']=tuple(args.capacities)
-    if args.hold_targets is not None:overrides['cases']=tuple((q,q) for q in args.hold_targets)
+    if args.hold_targets is not None:
+        if args.hold_start_offsets is None:
+            overrides['cases']=tuple((q,q) for q in args.hold_targets)
+        else:
+            overrides['cases']=tuple(dict.fromkeys((q+d,q) for q in args.hold_targets
+                for d in args.hold_start_offsets if 15.<=q+d<=135.))
+        if not overrides['cases']:
+            raise ValueError('No hold starts within the declared 15..135 degree training range')
     if args.energy is not None:overrides['activation_squared_weight']=args.energy
     if args.fatigue is not None:overrides['active_fraction_weight']=args.fatigue
     spec=replace(spec,**overrides)
@@ -218,12 +225,16 @@ def main():
     p.add_argument('--tilts',type=float,nargs='+')
     p.add_argument('--capacities',type=float,nargs='+')
     p.add_argument('--hold-targets',type=float,nargs='+')
+    p.add_argument('--hold-start-offsets',type=float,nargs='+',
+        help='Corrective starts around hold targets, restricted to the declared15..135deg training range')
     p.add_argument('--validation-tilts',type=float,nargs='+')
     p.add_argument('--validation-masses',type=float,nargs='+')
     p.add_argument('--validation-capacities',type=float,nargs='+')
     p.add_argument('--energy',type=float)
     p.add_argument('--fatigue',type=float)
     args=p.parse_args()
+    if args.hold_start_offsets is not None and args.hold_targets is None:
+        p.error('Hold start offsets require explicit hold targets')
     if args.workers not in (1,2,4) or args.minimum_steps%32768 or args.check_steps%1024:
         p.error('Use1/2/4 workers, minimum budget divisible by32768 and check interval by1024')
     if args.fixed_steps is not None and (args.fixed_steps<=0 or args.fixed_steps%args.check_steps):

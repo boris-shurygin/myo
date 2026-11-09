@@ -1,8 +1,128 @@
 # Проверки проекта
 
+## Ограничение фонового обучения на ноутбуке — 2026-11-09
+
+По просьбе владельца оставлен один основной опыт `hold_joint`. Для его дерева
+из 10 процессов проверены affinity CPU 12–15 и nice 19; существующие потоки
+обработаны через `/proc/PID/task`, I/O приоритет установлен `ionice -c 3`.
+Использованы `os.sched_setaffinity`, `os.setpriority`, затем проверены значения
+через `/proc`, `ps` и `os.sched_getaffinity`. Другие пользовательские процессы
+не изменялись.
+
+Вспомогательный `fatigue_refine` завершён SIGTERM вместе с дочерними процессами
+после сохранённой validation на 16384 новых шагах; exit 143 ожидаем для этой
+остановки. Основной процесс продолжает работу, физика/learning rate не менялись.
+`free -m`: available RAM 2179 → 5493 MiB; swap остаётся занят, принудительной
+очистки не было. Повторный `ps` подтвердил отсутствие вспомогательных Python
+процессов. Новых training/test/GUI запусков для этой настройки не потребовалось.
+
 ## Разные нагрузки/ориентации и затраты — 2026-11-09
 
 План/журнал: [arm-load-orientation-efficiency.md](arm-load-orientation-efficiency.md).
+
+Последовательные проверки после ограничения нагрузки:
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/probe_arm_workload_exploration.py \
+  --controller runs/arm_workload/hold_joint/best.zip \
+  --output runs/arm_workload/hold_joint/exploration_probe.json
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/evaluate_arm_efficiency.py \
+  --roots runs/arm_workload/fatigue_control runs/arm_workload/fatigue_03 --workers 2
+```
+
+Обе exit0. Основное обучение временно SIGSTOP и возобновлено через SIGCONT
+в`finally` без reset/RNG restart; snapshot пробы — SHA`f347eef47e27…`,
+best после393216 дополнительных transitions. Детерминированная probe-wrapper
+побитово воспроизвела6 сохранённых validation-строк. Всего24 эпизода:
+deterministic2/6,stochastic0/18; physical failures0. В худших двух положениях
+sampled-команды не исправили~18° ошибку; в остальных выросла RMS скорости.
+Шум/mean — частичное отличие, а не установленная причина всего провала.
+
+Baseline E8 завершилась по`validation_plateau_two_blocks`:458752 дополнительных
+transitions,35735 SGD,best2,240°;56/72,last2,498°;50/72,failures0.
+Проба`probe_arm_workload_preload.py --angle 125 --tilt 135 --mass 2`
+на этом best: learned cold/equilibrium17,907°/17,912°,
+heuristic0,01389°/0,01550°. Reset-preload сохранилq/qvel/time и дал
+статический баланс−9,271183 Nm приaext0,442807; learned сразу снижаетu до0,3007.
+Это диагностические reset-условия, не помощь policy во время обучения.
+
+Перед E10 повторено`python3 -m pytest -q tests/test_arm_workload.py` в проектной
+venv с nice19/CPU12–15/одним BLAS потоком: **4 passed in3,74 s**.
+Runner E10 с`--hold-targets 30 60 90 120 135 --hold-start-offsets 0 10`
+создал9 учебных пар/324 комбинации, initial validation72 побитово равна best
+родителя E8. Новая training-фаза ещё не является успешной motor policy;
+actual runner source/spec/parent SHA сохранены в её root.
+
+E10 затем завершилась exit0 по`validation_plateau_two_blocks`:131072 новых
+transitions/10240 SGD,best65536 —2,098°;57/72,last2,214°;55/72,
+failures0. Проверки не меняли PPO,наград,наблюдений или исходной механики.
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/probe_arm_workload_coverage.py \
+  --controllers runs/arm_workload/hold_joint/best.zip \
+  runs/arm_workload/hold_joint_corrective/best.zip \
+  --output runs/arm_workload/coverage_probe.json --workers 2
+```
+
+Exit0.12 predefined **train**-условий:hold120/135°×tilt120/150°×0,5/1/2 kg,
+capacity1,4 s. Принадлежность каждой ячейки training-spec проверена.
+E8/E10:5/12;7,118° и6/12;6,843°. Native heuristic:12/12;0,01298°.
+Physical failures0. Провал есть на самих учебных условиях,а не только между
+углами validation. После двух плато совместное обучение остановлено;
+вся последующая evaluation использует уже выбранные frozen snapshots.
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/evaluate_arm_workload.py \
+  --roots runs/arm_workload/hold_joint runs/arm_workload/hold_joint_corrective \
+  --kind hold_joint --workers 4
+```
+
+Exit0. Отдельный заранее определённый test72 —holds30/60/90/120°,
+6 промежуточных tilt,массы0,75/1,5/2 kg,capacity1. Обе selection frozen до test;
+strict replay best/last побитово равен сохранённой validation у обеих моделей.
+E8 initial/best/last:5,634°;25/72 /2,650°;54/72 /2,878°;51/72.
+E10 initial/best/last:2,650°;54/72 /2,518°;52/72 /2,640°;53/72.
+Все432 test-эпизода без physical failure. Выбор checkpoint по test не менялся.
+При более низкой средней ошибке E10 best прошла меньше удержаний,чем E8 best;
+универсальное управление разными грузами/ориентациями не получено.
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/demo_arm_preacher.py \
+  --controller runs/arm_workload/fatigue_03/matched_efficiency.zip \
+  --mass 2 --tilt 30 --seconds 16 --scripted \
+  --output runs/arm_workload/fatigue_03/demo_2kg.jsonl
+```
+
+Exit0,failure false,full-transition RMSE20,596° с изменениями целей.
+Телеметрия проверена:800 последовательных v2-кадров,один episode,
+simulation time0,02→16,00 s. Это headless-проверка загрузчика/непрерывности,
+а не новая оценка GUI и не ошибка установившегося удержания.
+`scripts/report_arm_workload.py --plot` с доступным локальным Matplotlib
+завершился exit0; сводка/PNG/SVG обновлены после финальных evaluation.
+Фигура из собственных агрегированных метрик сохранена как
+`docs/images/arm-workload-validation.svg`; геометрия/веса/rollouts в неё не включены.
+`py_compile` пяти изменённых training/evaluation/probe scripts и`git diff --check`
+завершились exit0. Физика,шаги,добавленные155 входов и checkpoint-source hash
+`arm_workload.py` за это продолжение не менялись; новых зависимостей не установлено.
+
+Efficiency: выбор обеих моделей frozen до test, одинаковые selector/parent/
+PPO/budget/validation; strict replay совпал у обеих. Test control2,008°;25/33,
+cost1,831°;26/33; mean active fraction−4,26%,mean a²−19,30%.
+Четыре20-s holds обе4/4:0,636/0,709°,active fraction−1,06%.
+Maximum per-muscle capacity loss0,062207→0,047442,но mean net-loss всех мышц
+снизилась только на1,25%,а coactivation выросла.10%-gate active fraction
+не достигнут. Полные числа/ограничения сравнения — в журнале E7.
+
 Исходное состояние сохранено коммитом `8ea11f9`. Старые physics/observations/
 policy contracts не менялись; новая среда/155-channel checkpoint отдельные.
 
@@ -105,6 +225,13 @@ exit0,16 s без failures/reset, telemetry800 кадров. Full-transition RMS
 **0,860°;4/4**,full-episode RMSE0,343/0,638/1,921/1,205°,
 установление0,56/0,66/0,40/0,30 s. Максимальная фактическая потеря capacity
 0,05673 у BICshort; physiological calibration этим не подтверждена.
+
+Тот же scripted CLI демо с`--controller runs/arm_workload/mass_capacity/best.zip`
+и`--mass 2 --tilt 30 --seconds 16 --scripted` завершился exit0 без failure.
+Телеметрия`mass_capacity/demo_2kg.jsonl`:800 кадров, единственный episode0,
+время0,02→16,00 s, последнее положение46,24° при цели45°.
+Full-transition RMSE20,495° включает смены цели и не является ошибкой удержания.
+Нового GUI smoke для этой policy не запускали.
 
 Полный круг E5 вышел на плато: первая фаза131072 сохранённых transitions,
 продолжение196608;best2,062°;20/24. Уточнение только LR3e−5→1e−5 из этого
