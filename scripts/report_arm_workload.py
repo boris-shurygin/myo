@@ -5,12 +5,9 @@ import argparse
 import json
 from pathlib import Path
 
-from myo.train_vertical_ppo import write_json
-
-
 def report(root):
     summaries={p.parent.name:json.loads(p.read_text()) for p in sorted(root.glob('*/summary.json'))}
-    write_json(root/'comparison.json',summaries)
+    (root/'comparison.json').write_text(json.dumps(summaries,indent=2,allow_nan=False)+'\n')
     lines=['# Нагрузки, ориентации и затраты: журнал PPO','','| Ветка | Новых transitions | Причина остановки | Best val, ° | Pass | Mean a² | Active fraction |',
            '| --- | ---: | --- | ---: | --- | ---: | ---: |']
     for name,s in summaries.items():
@@ -47,17 +44,22 @@ def plot(root):
     for name,s in summaries.items():
         key=json.dumps(s['training']['validation'],sort_keys=True)
         groups.setdefault(key,[]).append((name,s))
-    fig,axes=plt.subplots(len(groups),3,figsize=(14,4*len(groups)),
+    fig,axes=plt.subplots(len(groups),4,figsize=(19,4*len(groups)),
                           squeeze=False,constrained_layout=True)
     for row,series in zip(axes,groups.values(),strict=True):
         for name,s in series:
-            x=[r['added_transitions'] for r in s['history']]
-            for axis,field in zip(row,('score_deg','activation_squared_mean','active_fraction_mean'),strict=True):
-                axis.plot(x,[r['validation'][field] for r in s['history']],marker='.',label=name)
-        for axis,title in zip(row,('Validation mean tail RMSE (deg)','Mean activation squared','Mean active fraction proxy'),strict=True):
-            axis.set(xlabel='Additional PPO transitions',title=title)
+            x=[r['steps']/1000 for r in s['history']]
+            for axis,field in zip(row,('score_deg','passed_percent','activation_squared_mean','active_fraction_mean'),strict=True):
+                y=[100*r['validation']['passed']/r['validation']['total'] if field=='passed_percent'
+                   else r['validation'][field] for r in s['history']]
+                axis.plot(x,y,marker='.',label=name)
+        row[0].axhline(3.,color='gray',linestyle=':',linewidth=1)
+        row[1].axhline(90.,color='gray',linestyle=':',linewidth=1)
+        row[1].set_ylim(-2,102)
+        for axis,title in zip(row,('Validation mean tail RMSE (deg)','Passed conditions (%)','Mean activation squared','Mean active fraction proxy'),strict=True):
+            axis.set(xlabel='Lifetime PPO transitions (thousands)',title=title)
             axis.grid(alpha=.25);axis.legend(fontsize=7)
-    fig.suptitle('Each row uses the same validation conditions; different rows are separate tasks')
+    fig.suptitle('Same validation per row. Successive phases and paired branches; source parents are documented.')
     for ext in ('png','svg'):fig.savefig(root/('comparison.'+ext),dpi=150)
     plt.close(fig)
 

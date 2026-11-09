@@ -1,5 +1,6 @@
 """Measure native segment masses, static torque reserve and antagonist ablation."""
 from dataclasses import replace
+import argparse
 import json
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import numpy as np
 import torch
 
 from myo.arm_learning import load_arm
+from myo.arm_precision import VALIDATION_CASES
 from myo.arm_workload import ArmWorkloadEnv, evaluate_workload, scenarios
 from myo.muscle import SeriesElasticMuscle
 from myo.train_vertical_ppo import write_json
@@ -14,6 +16,24 @@ from myo.train_vertical_ppo import write_json
 
 def main():
     torch.set_num_threads(1)
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--effort-reference',action='store_true',
+                        help='Only measure heuristic accuracy/effort on common validation and long holds')
+    args=parser.parse_args()
+    if args.effort_reference:
+        root=Path('runs/arm_workload_reference');root.mkdir(exist_ok=False,parents=True)
+        env=ArmWorkloadEnv();contract=env.contract();env.close()
+        report={'contract':contract,'controller':'native heuristic; a reference, not an energy optimum'}
+        conditions={'validation':scenarios(VALIDATION_CASES,masses=(.5,1.,2.)),
+            'long_holds':scenarios(((60,60),(120,120)),masses=(.75,2.),capacities=(.85,),seconds=20.)}
+        for name,cases in conditions.items():
+            result=evaluate_workload('heuristic',cases)
+            report[name]=result
+            print(json.dumps({'set':name,'score_deg':result['score_deg'],'passed':result['passed'],
+                'total':result['total'],'a2':result['activation_squared_mean'],
+                'active_fraction':result['active_fraction_mean']}),flush=True)
+        write_json(root/'reference.json',report)
+        return
     root=Path('runs/arm_workload_audit');root.mkdir(exist_ok=False,parents=True)
     env=ArmWorkloadEnv()
     base=env.unwrapped

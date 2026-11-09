@@ -98,6 +98,45 @@ exit0,16 s без failures/reset, telemetry800 кадров. Full-transition RMS
 Текущая сводка:
 `.venv/bin/python3 scripts/report_arm_workload.py`.
 
+Продолжение E4 final evaluation выполнено с`--roots runs/arm_workload/mass_capacity
+--kind mass --long --workers 1`: exit0,strict validation replay best/last
+совпал с training evaluation четырёх workers. Общий fresh mass-test:
+1,782°;26/33;failures0. Четыре20-s удержания приcapacity0,85:
+**0,860°;4/4**,full-episode RMSE0,343/0,638/1,921/1,205°,
+установление0,56/0,66/0,40/0,30 s. Максимальная фактическая потеря capacity
+0,05673 у BICshort; physiological calibration этим не подтверждена.
+
+Полный круг E5 вышел на плато: первая фаза131072 сохранённых transitions,
+продолжение196608;best2,062°;20/24. Уточнение только LR3e−5→1e−5 из этого
+best,32768 transitions/2560 SGD,241,35 s:1,866°;22/24;failures0.
+Прошёл practical validation-gate, но125°/tilt135° остаётся с17,356° ошибки.
+Не смешивать этот критерий с успешностью каждого угла.
+
+E6: обе парные ветки2×512 завершены после65536. Initial policy/optimizer/
+pytorch tensor archives совпали побайтово. Control4987 SGD,1526,86 s;
+activation²-cost5066 SGD,1505,67 s. Efficiency-best со штрафом остался initial;
+снижение затрат без потери accuracy/pass не установлено. Tracking-best
+1,673°;25/27,mean a²0,030824 (initial0,030475);last2,315°;22/27.
+Код runner при E6 архивирован до более поздней смены efficiency-selection.
+
+```bash
+taskset -c 1,3,5,7 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/audit_arm_workload.py --effort-reference
+```
+
+Exit0: native heuristic на validation27 даёт0,232°;27/27,a²0,009137,
+active fraction0,060359; на20-s holds0,00479°;4/4,a²0,010383,
+active fraction0,057652. Это reference, не доказанный optimum.
+
+Postprocessing compile/diff checks прошли. Для evaluator проверено совпадение
+полного uncompressed ZIP+sidecar содержимого best/last E4 иinitial/energy-best E6
+(исключены только ZIP timestamps и внешняя SHA). Новая версия переиспользует
+evaluation только для таких идентичных архивов и одинакового списка условий;
+файловая SHA/metadata и strict replay результата по-прежнему проверяются.
+Reporter больше не импортирует training/Torch ради чтения JSON. Кривые
+группируются по точному validation-набору; по осиX — lifetime transitions,
+чтобы последовательные curriculum-фазы не выглядели запуском с одного parent.
+
 ## Интерактивное PPO-демо руки — 2026-11-09
 
 [Запуск и клавиши](arm-interactive-demo.md). Launcher `scripts/demo_arm.sh`

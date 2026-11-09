@@ -117,6 +117,10 @@ def train(args):
                 'value':.5,'grad_norm':.5,'target_kl':.03,'optimizer':'RMSprop'},
             'validation':validation,'minimum_transitions':args.minimum_steps,'fixed_steps':args.fixed_steps,
             'stop':'stage passes after minimum experience, or two32768-transition blocks without accumulated2% progress',
+            'efficiency_selection':('weighted added activation cost; >=10% reduction without losing initial passes '
+                'and mean error <=initial+0.25deg; native costs unchanged'
+                if spec.activation_squared_weight>0 or spec.active_fraction_weight>0
+                else 'tracking rank; auxiliary combined effort proxy does not determine stopping'),
             'spec':asdict(spec),'versions':{k:version(k) for k in ('torch','stable-baselines3','mujoco','numpy')},
             'runner_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
         source_steps,source_sgd=model.num_timesteps,model.optimizer_steps
@@ -127,6 +131,12 @@ def train(args):
         started=time.monotonic()
         best=None;reference=None;progress_in_block=False;best_energy=None;initial=None
         optimizing=spec.activation_squared_weight>0 or spec.active_fraction_weight>0
+
+        def effort_value(result):
+            if not optimizing:
+                return energy_value(result)
+            return (spec.activation_squared_weight*result['activation_squared_mean']
+                    +spec.active_fraction_weight*result['active_fraction_mean'])
 
         def check():
             nonlocal best,reference,progress_in_block,best_energy,initial
@@ -139,9 +149,10 @@ def train(args):
                 summary.update(best_steps=model.num_timesteps,best_validation=result)
                 save_workload(model,checking,args.root/'best.zip',training)
             eligible=(result['failures']==0 and result['passed']>=initial['passed']
-                      and result['score_deg']<=initial['score_deg']+.25)
-            if eligible and (best_energy is None or energy_value(result)<best_energy):
-                best_energy=energy_value(result)
+                      and result['score_deg']<=initial['score_deg']+.25
+                      and (not optimizing or stage_passed(result)))
+            if eligible and (best_energy is None or effort_value(result)<best_energy):
+                best_energy=effort_value(result)
                 summary.update(energy_best_steps=model.num_timesteps,energy_best_validation=result)
                 save_workload(model,checking,args.root/'energy_best.zip',training)
             if reference is None or (result['failures']<reference['failures']
@@ -149,7 +160,7 @@ def train(args):
                     (result['passed']>reference['passed'] and result['score_deg']<=1.05*reference['score_deg'])
                     or (result['passed']>=reference['passed'] and result['score_deg']<=.98*reference['score_deg'])
                     or (result['passed']>=reference['passed'] and worst_group(result)<=.98*worst_group(reference))
-                    or (optimizing and eligible and energy_value(result)<=.98*energy_value(reference))))):
+                    or (optimizing and eligible and effort_value(result)<=.98*effort_value(reference))))):
                 reference=result;progress_in_block=True
             summary['history'].append({'steps':model.num_timesteps,'added_transitions':model.num_timesteps-source_steps,
                 'validation':result,'optimizer_steps':model.optimizer_steps,'energy_eligible':eligible})
@@ -171,7 +182,7 @@ def train(args):
                 check()
                 if added>=args.minimum_steps:
                     achieved=(stage_passed(summary['best_validation']) if not optimizing else
-                        best_energy is not None and best_energy<=.9*energy_value(initial)
+                        best_energy is not None and best_energy<=.9*effort_value(initial)
                         and stage_passed(summary['energy_best_validation']))
                     if achieved and not args.fixed_steps:
                         summary['stop_reason']='validation_stage_passed';break

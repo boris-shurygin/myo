@@ -5,6 +5,7 @@ import hashlib
 import json
 import multiprocessing
 from pathlib import Path
+from zipfile import ZipFile
 
 import torch
 
@@ -14,10 +15,24 @@ from myo.arm_workload_evaluation import evaluate_parallel
 from myo.train_vertical_ppo import write_json
 
 
+def archive_identity(path):
+    """Exact contents and sidecar identity, ignoring only ZIP timestamps/hash."""
+    digest=hashlib.sha256()
+    with ZipFile(path) as archive:
+        for name in sorted(archive.namelist()):
+            digest.update(name.encode()+b'\0')
+            digest.update(archive.read(name))
+    meta=json.loads(Path(str(path)+'.metadata.json').read_text())
+    meta.pop('checkpoint_sha256')
+    digest.update(json.dumps(meta,sort_keys=True).encode())
+    return digest.hexdigest()
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--roots',type=Path,nargs='+',required=True)
     p.add_argument('--kind',choices=('mass','circle','joint'),default='mass')
+    p.add_argument('--workers',type=int,choices=(1,2,4),default=4)
     p.add_argument('--long',action='store_true')
     args=p.parse_args();torch.set_num_threads(1)
     summaries={root:json.loads((root/'summary.json').read_text()) for root in args.roots}
@@ -44,20 +59,26 @@ def main():
                     tilts=((45.,105.,165.,225.,285.,345.)[j],),capacities=((1.,.85)[j%2],))
     long=scenarios(((60,60),(120,120)),masses=(.75,2.),
                    tilts=(30.,120.,210.,300.) if args.kind!='mass' else (30.,),capacities=(.85,),seconds=20.)
-    with ProcessPoolExecutor(max_workers=4,mp_context=multiprocessing.get_context('spawn')) as pool:
+    with ProcessPoolExecutor(max_workers=args.workers,mp_context=multiprocessing.get_context('spawn')) as pool:
+        cache={}
+        def evaluate(path,conditions):
+            key=(archive_identity(path),json.dumps(conditions,sort_keys=True))
+            if key not in cache:
+                cache[key]=evaluate_parallel(pool,path,conditions,args.workers)
+            return cache[key]
         for root,s in summaries.items():
             for label in manifests[root]:
                 path=root/(label+'.zip')
                 assert hashlib.sha256(path.read_bytes()).hexdigest()==manifests[root][label]
                 if label in ('best','last'):
-                    replay=evaluate_parallel(pool,path,s['training']['validation'],4)
+                    replay=evaluate(path,s['training']['validation'])
                     expected=s['best_validation'] if label=='best' else s['history'][-1]['validation']
                     assert replay==expected
-                result=evaluate_parallel(pool,path,conditions,4)
+                result=evaluate(path,conditions)
                 write_json(root/(label+'_test.json'),result)
                 s[label+'_test']=result
                 if args.long and label in ('best','energy_best'):
-                    s[label+'_long_holds']=evaluate_parallel(pool,path,long,4)
+                    s[label+'_long_holds']=evaluate(path,long)
                     write_json(root/(label+'_long_holds.json'),s[label+'_long_holds'])
                 print(json.dumps({'root':str(root),'label':label,'test_deg':result['score_deg'],
                     'pass':result['passed'],'total':result['total'],'failures':result['failures']}),flush=True)
