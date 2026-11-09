@@ -24,7 +24,9 @@ def main():
     assert all(s['status'] in ('training_complete','complete') for s in summaries.values())
     manifests={}
     for root,s in summaries.items():
-        labels=['initial','best','last']+(['energy_best'] if 'energy_best_steps' in s else [])
+        optimizing=(s['training']['spec']['activation_squared_weight']>0 or
+                    s['training']['spec']['active_fraction_weight']>0)
+        labels=['initial','best','last']+(['energy_best'] if optimizing and 'energy_best_steps' in s else [])
         manifest={label:json.loads((root/(label+'.zip.metadata.json')).read_text())['checkpoint_sha256'] for label in labels}
         frozen=root/'frozen_selection.json'
         if frozen.exists():assert json.loads(frozen.read_text())==manifest

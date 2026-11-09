@@ -30,7 +30,8 @@ def report(root):
         for field,groups in s['best_validation']['groups'].items():
             for value,g in groups.items():
                 lines.append(f"| {field} | {value} | {g['score_deg']:.3f} | {g['passed']}/{g['total']} |")
-        for label in ('best_test','last_test','long_holds'):
+        for label in ('initial_test','best_test','last_test','energy_best_test',
+                      'best_long_holds','energy_best_long_holds'):
             if label in s:
                 v=s[label]
                 lines+=['',f"{label}: {v['score_deg']:.3f}°; {v['passed']}/{v['total']}; failures{v['failures']}."]
@@ -42,13 +43,21 @@ def plot(root):
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     summaries={p.parent.name:json.loads(p.read_text()) for p in sorted(root.glob('*/summary.json'))}
-    fig,axes=plt.subplots(1,3,figsize=(14,4),constrained_layout=True)
+    groups={}
     for name,s in summaries.items():
-        x=[r['added_transitions'] for r in s['history']]
-        for axis,field in zip(axes,('score_deg','activation_squared_mean','active_fraction_mean'),strict=True):
-            axis.plot(x,[r['validation'][field] for r in s['history']],marker='.',label=name)
-    for axis,title in zip(axes,('Validation mean tail RMSE (deg)','Mean activation squared','Mean active fraction proxy'),strict=True):
-        axis.set(xlabel='Additional PPO transitions',title=title);axis.grid(alpha=.25);axis.legend(fontsize=7)
+        key=json.dumps(s['training']['validation'],sort_keys=True)
+        groups.setdefault(key,[]).append((name,s))
+    fig,axes=plt.subplots(len(groups),3,figsize=(14,4*len(groups)),
+                          squeeze=False,constrained_layout=True)
+    for row,series in zip(axes,groups.values(),strict=True):
+        for name,s in series:
+            x=[r['added_transitions'] for r in s['history']]
+            for axis,field in zip(row,('score_deg','activation_squared_mean','active_fraction_mean'),strict=True):
+                axis.plot(x,[r['validation'][field] for r in s['history']],marker='.',label=name)
+        for axis,title in zip(row,('Validation mean tail RMSE (deg)','Mean activation squared','Mean active fraction proxy'),strict=True):
+            axis.set(xlabel='Additional PPO transitions',title=title)
+            axis.grid(alpha=.25);axis.legend(fontsize=7)
+    fig.suptitle('Each row uses the same validation conditions; different rows are separate tasks')
     for ext in ('png','svg'):fig.savefig(root/('comparison.'+ext),dpi=150)
     plt.close(fig)
 

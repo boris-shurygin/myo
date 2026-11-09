@@ -47,7 +47,7 @@ Initial validation27 условий7,819692°;10/27, after7,901573°;10/27, fail
 сохраняются в metadata. Actual runner source архивируется в каталоге опыта.
 Веса/rollouts в ignored `runs/arm_workload*`.
 
-Запущены:
+Выполнены:
 
 ```bash
 taskset -c 0,2,4,6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
@@ -58,9 +58,44 @@ taskset -c 8,10,12,14 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREA
   --root runs/arm_workload/fixed_control --fixed-steps 65536
 ```
 
-Обе initial validation равны smoke:7,819692°;10/27. Trial mass может
-продолжаться после65536 при прогрессе; fixed_control — ровный контроль бюджета.
-Final test пока не открывался. Текущая сводка:
+Обе initial validation равны smoke:7,819692°;10/27. Mass завершён после98304
+по success gate:1,963°;25/27. Fixed-control65536:best6,891°;10/27.
+На одинаковых65536 mass1,965°;22/27 против fixed last7,094°;9/27.
+После freeze strict replay best/last обеих веток совпал побитово;
+test33 при0,75/1,5/2,5 kg:mass2,658°;26/33, fixed best9,631°;8/33.
+Четыре20-s удержания приcapacity0,85 не пройдены (mass6,624°;0/4).
+Команда final evaluation:
+
+```bash
+taskset -c 8,10,12,14 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/evaluate_arm_workload.py \
+  --roots runs/arm_workload/fixed_control runs/arm_workload/mass --kind mass --long
+```
+
+Отдельная ветка `mass_capacity` обучена сcapacity0,7/1,0, прежними массами/
+заданиями/reward. После163840 новых transitions validation при0,85:
+**0,973°;25/27;failures0**,12800 SGD, `validation_stage_passed`.
+Ближние ориентации `hold_near`:147456 новых transitions,1,187°;11/12,
+failures0; success gate. Полный круг продолжается. Первоначальный процесс
+`hold_circle` завершился внешним SIGTERM/143; причина неизвестна. Последний
+checkpoint131072 новых transitions строго загружен в `hold_circle_resume`;
+weights/moments перенесены, среды/RNG перезапущены явно.
+
+Диагностика худшего125°/tilt135° на промежуточном circle checkpoint65536:
+`scripts/probe_arm_workload_preload.py`, exit0. Cold/preloaded learned дают
+17,68667°/17,68670°, heuristic0,00899°/0,00687°. Проверены неизменностьq/qvel/
+time при reset-preload и статический баланс−6,007326 Nm. Это диагностическое
+начальное состояние, не изменение runtime-динамики или помощь обучению.
+
+Offscreen `MUJOCO_GL=egl`: фактически отрисованы и просмотрены PNG при
+tilt30/120/210/300°,75° elbow,1 kg после1 s heuristic. Камера охватывает
+кости/груз/мышцы и сохраняет отдельные цветовые шкалы; изображения в ignored
+`runs/arm_workload/render_review/`. Это проверка визуализации ориентаций,
+не проверка новой PPO-policy или клавиатурного GUI.
+Headless CLI `scripts/demo_arm_preacher.py --controller runs/arm_workload/mass/best.zip --mass 2 --tilt 30 --seconds 16 --scripted`:
+exit0,16 s без failures/reset, telemetry800 кадров. Full-transition RMSE21,548°
+включает четыре смены цели и не заменяет tail-метрики.
+Текущая сводка:
 `.venv/bin/python3 scripts/report_arm_workload.py`.
 
 ## Интерактивное PPO-демо руки — 2026-11-09

@@ -69,8 +69,8 @@ def load_parent(path):
 
 
 def energy_value(result):
-    # Report both physical proxies separately; this ranking weights their
-    # fractional reductions equally, with no interpretation as metabolic units.
+    # Report both physical proxies separately. This fixed scalar ranking uses
+    # raw proxy units; it is not a measured metabolic cost.
     return result['activation_squared_mean']+result['active_fraction_mean']*.1
 
 
@@ -86,14 +86,18 @@ def train(args):
     overrides={}
     if args.masses is not None:overrides['masses']=tuple(args.masses)
     if args.tilts is not None:overrides['tilts']=tuple(args.tilts)
+    if args.capacities is not None:overrides['capacities']=tuple(args.capacities)
+    if args.hold_targets is not None:overrides['cases']=tuple((q,q) for q in args.hold_targets)
     if args.energy is not None:overrides['activation_squared_weight']=args.energy
     if args.fatigue is not None:overrides['active_fraction_weight']=args.fatigue
     spec=replace(spec,**overrides)
-    if args.validation_tilts is not None or args.validation_masses is not None:
+    if (args.validation_tilts is not None or args.validation_masses is not None
+            or args.validation_capacities is not None):
         cases=tuple(dict.fromkeys(tuple(c['case']) for c in validation))
         masses=tuple(args.validation_masses) if args.validation_masses is not None else tuple(sorted({c['payload_mass'] for c in validation}))
         tilts=tuple(args.validation_tilts) if args.validation_tilts is not None else tuple(sorted({c['tilt_deg'] for c in validation}))
-        capacities=tuple(sorted({c['capacity'] for c in validation}))
+        capacities=(tuple(args.validation_capacities) if args.validation_capacities is not None
+                    else tuple(sorted({c['capacity'] for c in validation})))
         validation=scenarios(cases,masses=masses,tilts=tilts,capacities=capacities)
     checking=ArmWorkloadEnv(spec)
     contract=checking.contract()
@@ -201,8 +205,11 @@ def main():
     p.add_argument('--check-steps',type=int,default=16384)
     p.add_argument('--masses',type=float,nargs='+')
     p.add_argument('--tilts',type=float,nargs='+')
+    p.add_argument('--capacities',type=float,nargs='+')
+    p.add_argument('--hold-targets',type=float,nargs='+')
     p.add_argument('--validation-tilts',type=float,nargs='+')
     p.add_argument('--validation-masses',type=float,nargs='+')
+    p.add_argument('--validation-capacities',type=float,nargs='+')
     p.add_argument('--energy',type=float)
     p.add_argument('--fatigue',type=float)
     args=p.parse_args()
