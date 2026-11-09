@@ -1,5 +1,68 @@
 # Проверки проекта
 
+## Разные нагрузки/ориентации и затраты — 2026-11-09
+
+План/журнал: [arm-load-orientation-efficiency.md](arm-load-orientation-efficiency.md).
+Исходное состояние сохранено коммитом `8ea11f9`. Старые physics/observations/
+policy contracts не менялись; новая среда/155-channel checkpoint отдельные.
+
+```bash
+.venv/bin/python3 -m pytest -q tests/test_arm_workload.py
+taskset -c 12 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q
+env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q \
+  tests/test_telemetry.py::test_command_receiver_ignores_old_episode_and_timeout_only_requests_relaxation
+taskset -c 6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/audit_arm_workload.py
+```
+
+Targeted: **4 passed in2,76 s**. Проверены точные native transitions при30/210°,
+1/2 kg, периодичность+360°, сохранение dynamics при новой cost и перенос
+старой функции/RMSprop в155 inputs с нулевыми новыми колонками, strict reload.
+Full suite: **185 passed,1 failed,6 warnings in190,44 s** при параллельном
+аудите/пробных процессах. Единственный failed — sandbox запрещает UDP socket.
+Повтор вне sandbox: **1 passed in1,14 s**. Все186 проверок выполнены;
+это не один полный186-pass запуск. Пакеты не менялись.
+
+Аудит exit0: масса подвижной руки без груза1,783386 kg; humerus1,99757 kg
+закреплён. Из672 статических условий2 недостижимы для разгибателей:
+135°,2,5 kg,capacity0,7,tilt120/150°. На изученных≤125° и≤2 kg статический
+запас есть. Исходная mean tail RMSE шести20-s удержаний1,878°,
+zero-extensor intervention18,688°. Это отключение команд без переобучения
+сгибателей, не доказательство обязательной коактивации.
+
+Smoke:
+
+```bash
+taskset -c 0,2,4,6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/train_arm_workload.py --stage mass \
+  --root runs/arm_workload_smoke --fixed-steps 1024 --check-steps 1024 --minimum-steps 32768
+```
+
+Exit0,4 среды×256,1024 transitions,80 SGD. Это plumbing, не успешный контроллер.
+Initial validation27 условий7,819692°;10/27, after7,901573°;10/27, failures0.
+Первые66k-опыты используют параллельную evaluation; smoke был с serial evaluation.
+Гиперпараметры, hashes parent/runner, версии, reset/sampling schedule и spec
+сохраняются в metadata. Actual runner source архивируется в каталоге опыта.
+Веса/rollouts в ignored `runs/arm_workload*`.
+
+Запущены:
+
+```bash
+taskset -c 0,2,4,6 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/train_arm_workload.py --stage mass \
+  --root runs/arm_workload/mass --minimum-steps 65536
+taskset -c 8,10,12,14 env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/train_arm_workload.py --stage fixed \
+  --root runs/arm_workload/fixed_control --fixed-steps 65536
+```
+
+Обе initial validation равны smoke:7,819692°;10/27. Trial mass может
+продолжаться после65536 при прогрессе; fixed_control — ровный контроль бюджета.
+Final test пока не открывался. Текущая сводка:
+`.venv/bin/python3 scripts/report_arm_workload.py`.
+
 ## Интерактивное PPO-демо руки — 2026-11-09
 
 [Запуск и клавиши](arm-interactive-demo.md). Launcher `scripts/demo_arm.sh`
