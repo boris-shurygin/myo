@@ -30,6 +30,17 @@ def test_plateau_history_retains_accumulated_reference_across_phase_caps():
     validation = {'failures': 0, 'passed': 25, 'total': 27, 'score_deg': 1.2, 'groups': {}}
     training = {'failures': 0, 'passed': 16, 'total': 18}
     assert not runner['full_stage_passed'](validation, training)
+    # Cheap relaxation outside tolerance must not win the effort curriculum.
+    initial = {'failures': 0, 'passed': 18, 'total': 18, 'score_deg': .8,
+               'activation_squared_mean': .12, 'groups': {}}
+    rank = runner['effort_rank']
+    parent = rank(initial, initial, initial, initial)
+    cheap_failure = {**initial, 'passed': 17, 'activation_squared_mean': .01}
+    assert rank(cheap_failure, initial, initial, initial) > parent
+    inaccurate = {**initial, 'score_deg': 1.1, 'activation_squared_mean': .01}
+    assert rank(inaccurate, initial, initial, initial) > parent
+    precise_saving = {**initial, 'score_deg': .9, 'activation_squared_mean': .10}
+    assert rank(precise_saving, precise_saving, initial, initial) < parent
     training['passed'] = 18
     assert runner['full_stage_passed'](validation, training)
     validation['passed'] = 23

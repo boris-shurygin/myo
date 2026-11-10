@@ -1,5 +1,69 @@
 # Проверки проекта
 
+## Подготовка curriculum экономии усилий — 2026-11-10
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q \
+  tests/test_arm_exploration.py tests/test_arm_reward_curriculum.py
+```
+
+**6 passed in26,00 s**. Проверены прежние физические/likelihood/roundtrip
+инварианты и защита effort-selection от дешёвого провала цели или превышения
+допустимой ошибки. Используется прежний `position_efficiency` wrapper;
+runner задаёт коэффициенты явно и сохраняет их с новым training snapshot.
+Изменённые веса награды не допускают переноса старой plateau-reference.
+Исходный успешный checkpoint и pinned physical/reward modules не изменены.
+Протокол —[arm-effort-curriculum.md](arm-effort-curriculum.md).
+
+Полный запуск выполнен с теми же CPU/priority/BLAS ограничениями вне socket
+sandbox,чтобы включить локальный UDP-loopback:
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q
+```
+
+**192 passed,6 warnings in95,50 s**. Это единый полный запуск,UDP не исключён.
+Warnings —существующие Gymnasium observation-space предупреждения.
+
+Четыре последовательных training jobs завершены:weight0/0,1 при LR1e−5,
+по65536 transitions;weight0/0,1 при LR3e−6,по32768. Всего196608 transitions.
+Best всех четырёх остался initial:новой policy,сохранившей все18 train и27
+validation pass со снижением затрат,нет. Last меньшего LR со штрафом
+дешевле last контроля на4,398% по равновзвешенному mean(a²) train/validation,
+но оба проходят16/18 и25/27. Это не успех экономизации и не доказанное плато.
+Полные таблицы/выбор —в журнале опыта,данные —
+`runs/arm_effort_curriculum/comparison.json`.
+
+Начальные policy/optimizer serialized payloads первого matched-опыта
+побитово совпали с parent;первые1024 исходных учебных перехода совпали
+по физике/командам/mean/logp. Разница reward равна ожидаемому штрафу;
+max absolute error1,70e−17. Для выбранных best проверены checkpoint SHA,
+совпадение policy payloads и физического/input/detector contract с parent
+после удаления только reward mode/коэффициентов. Старый test8/8;0,670°
+переиспользован только для неизменившегося parent,не для новых last.
+
+Отдельно с тем же resource-prefix:
+
+```bash
+.venv/bin/python3 scripts/diagnose_arm_effort.py
+```
+
+Выполнены15 native replay(5 policy×3 удержания),по200 шагов,без physical
+failures. Диагностика разделила position/speed fractions:для Control LR1e−5
+Hold135°,tilt150°,2 кг position fraction1,0,speed fraction0,333,RMS скорости
+7,665°/s против0,779°/s у parent. Для Activation0.1 LR1e−5 Hold135°,tilt120°
+ошибка5,363° при RMS скорости0,254°/s. Нельзя считать эти разные провалы
+одной лишь нехваткой активации или одним лишь дрожанием.
+Артефакт —`failure_diagnostics.json`,включая per-step forces/activation/commands.
+Наблюдаемое несовпадение position-only reward и speed-критерия pass
+зафиксировано как направление следующей проверки,не как установленная
+единственная причина неуспеха PPO. Все свои training/diagnostic/test jobs
+завершены с exit0;новых работающих процессов обучения не оставлено.
+
 ## Продолжение PPO с журналом эпизодов — 2026-11-10
 
 ```bash

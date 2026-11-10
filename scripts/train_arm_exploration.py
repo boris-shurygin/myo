@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from functools import partial
 import hashlib
 from importlib.metadata import version
@@ -52,6 +52,15 @@ def tracking_improved(result, reference):
 def full_stage_passed(validation, training):
     return (stage_passed(validation) and training['failures'] == 0
             and training['passed'] == training['total'])
+
+
+def effort_rank(validation, training, initial_validation, initial_training):
+    """A cheap failed pose must never displace a precise parent."""
+    eligible = all(current['failures'] == 0 and current['passed'] == current['total']
+        and current['score_deg'] <= baseline['score_deg']+.25
+        for current, baseline in ((validation, initial_validation), (training, initial_training)))
+    effort = .5*(validation['activation_squared_mean']+training['activation_squared_mean'])
+    return (not eligible, effort, *validation_rank(validation), training['score_deg'])
 
 
 def reconstruct_stopping_state(history):
@@ -108,6 +117,14 @@ def train(args):
     checked.close()
     spec = spec_from_dict(parent_meta['contract']['spec'])
     reward = RewardStage(**parent_meta['contract']['reward_stage'])
+    if args.reward_mode is not None:
+        reward = RewardStage(args.reward_mode)
+    overrides = {name: value for name, value in (
+        ('activation_squared_weight', args.activation_squared_weight),
+        ('active_fraction_weight', args.active_fraction_weight)) if value is not None}
+    spec = replace(spec, **overrides)
+    if reward.mode == 'position_only' and (spec.activation_squared_weight or spec.active_fraction_weight):
+        raise ValueError('Position-only reward must not silently discard requested effort weights')
     exploration = ExplorationSpec(mode=args.mode, maximum_temperature=args.temperature)
     validation = json.loads(args.validation.read_text())
     train_conditions = (scenarios(spec.cases, spec.masses, spec.tilts, spec.capacities, spec.seconds)
@@ -128,6 +145,12 @@ def train(args):
             'adaptive_stop': args.adaptive_stop, 'minimum_steps': args.minimum_steps,
             'full_train_gate': args.full_train_gate,
             'episode_audit': args.audit_episodes,
+            'reward_stage': asdict(reward),
+            'reward_spec': {'activation_squared_weight': spec.activation_squared_weight,
+                            'active_fraction_weight': spec.active_fraction_weight},
+            'effort_selection': ('all train/validation passes; mean errors <= initial+.25deg; '
+                'then minimum equally weighted train/validation activation squared proxy'
+                if args.efficiency_selection else None),
             'audit_sha256': hashlib.sha256(audit_source.read_bytes()).hexdigest(),
             'stop_rule': ('current train100% plus validation gate or two32768 blocks '
                           'without accumulated2% train/validation progress; cap budget'
@@ -145,6 +168,7 @@ def train(args):
         best = None
         reference = None
         train_reference = None
+        initial_result = initial_train = None
         progress_in_block = False
         no_progress_blocks = 0
         if args.resume_stop_reference is not None:
@@ -178,17 +202,21 @@ def train(args):
         episodes = EpisodeAudit(args.root) if args.audit_episodes else None
 
         def check():
-            nonlocal best, reference, train_reference, progress_in_block
+            nonlocal best, reference, train_reference, progress_in_block, initial_result, initial_train
             save_workload(model, checking, args.root/'candidate.zip', training)
             combined = evaluate(args.root/'candidate.zip', validation+train_conditions)
             result = merge_results([{'cases': combined['cases'][:len(validation)]}])
             train_result = (merge_results([{'cases': combined['cases'][len(validation):]}])
                             if train_conditions else None)
+            if initial_result is None:
+                initial_result, initial_train = result, train_result
             rank = validation_rank(result)
             if train_result is not None:
                 rank = (not full_stage_passed(result, train_result),
                         train_result['failures'], -train_result['passed']/train_result['total'],
                         *rank, train_result['score_deg'])
+            if args.efficiency_selection:
+                rank = effort_rank(result, train_result, initial_result, initial_train)
             if best is None or rank < best:
                 best = rank
                 save_workload(model, checking, args.root/'best.zip', training)
@@ -218,6 +246,7 @@ def train(args):
                 'total': result['total'], 'error_deg': result['score_deg'], 'failures': result['failures'],
                 **({'train_passed': train_result['passed'], 'train_total': train_result['total'],
                     'train_error_deg': train_result['score_deg']} if train_result is not None else {}),
+                'activation_squared_mean': result['activation_squared_mean'],
                 'sgd': model.optimizer_steps-source_sgd, 'elapsed_s': time.monotonic()-started}), flush=True)
 
         save_workload(model, checking, args.root/'initial.zip', training)
@@ -291,12 +320,25 @@ def main():
                    help='Require all deterministic training cases plus validation; track progress on both')
     p.add_argument('--audit-episodes', action='store_true',
                    help='Record training trajectories, raw GAE and before/after action likelihoods')
+    p.add_argument('--reward-mode', choices=('position_only', 'position_efficiency'))
+    p.add_argument('--activation-squared-weight', type=float)
+    p.add_argument('--active-fraction-weight', type=float)
+    p.add_argument('--efficiency-selection', action='store_true',
+                   help='Fixed-budget study: preserve all initial train/validation passes before minimizing effort')
     args = p.parse_args()
     if (args.steps < 0 or (args.steps == 0 and not args.adaptive_stop) or args.check_steps <= 0
             or args.steps % args.check_steps or args.check_steps % 1024):
         p.error('Use complete validation intervals, divisible by1024')
     if args.adaptive_stop and (32768 % args.check_steps or args.minimum_steps % 32768):
         p.error('Adaptive checks must divide32768; minimum steps must be divisible by32768')
+    if any(value is not None and (not np.isfinite(value) or value < 0)
+           for value in (args.activation_squared_weight, args.active_fraction_weight)):
+        p.error('Effort weights must be finite and nonnegative')
+    if args.efficiency_selection and (not args.full_train_gate or args.adaptive_stop):
+        p.error('Effort selection requires a fixed budget and full train assessment')
+    if args.resume_stop_reference is not None and (args.reward_mode is not None or
+            args.activation_squared_weight is not None or args.active_fraction_weight is not None):
+        p.error('Changed rewards start a new progress reference')
     torch.set_num_threads(1)
     train(args)
 
