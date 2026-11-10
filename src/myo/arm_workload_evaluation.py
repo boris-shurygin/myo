@@ -1,15 +1,20 @@
 """Independent CPU evaluation workers; never touch PPO rollout state or RNG."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
 import numpy as np
 import torch
 
 from .arm_workload import load_workload, evaluate_workload
+from .arm_reward_curriculum import load_reward_curriculum
 
 
 def evaluation_job(path, conditions):
     torch.set_num_threads(1)
-    model,env,_=load_workload(path)
+    meta=json.loads(Path(str(path)+'.metadata.json').read_text())
+    loader=load_reward_curriculum if meta['contract']['schema']=='myo.arm_reward_curriculum.v1' else load_workload
+    model,env,_=loader(path)
     env.close()
     return evaluate_workload(model,conditions)
 

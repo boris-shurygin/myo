@@ -1,5 +1,338 @@
 # Проверки проекта
 
+## Продолжение PPO с журналом эпизодов — 2026-11-10
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q tests/test_arm_exploration.py
+```
+
+Результат: **4 passed in15,95 s**. Новый реальный PPO-сценарий с двумя worker
+и двумя rollout проверил512 записанных переходов и два завершённых эпизода,
+пересекающих update. Веса с включённым и выключенным audit побитово совпали;
+сырые advantages сопоставлены с исходными time/worker после SB3 flatten.
+Проверены полный train+validation gate,прежний detector/контракт/roundtrip.
+Это проверка диагностического кода,а не успеха дальнейшего обучения.
+Изменены runner и отдельный read-only audit;физические модули,наблюдения,
+награда,action mapping и `arm_exploration.py` остаются прежними.
+
+Дополнительный запуск с тем же resource-prefix:
+
+```bash
+.venv/bin/python3 -m pytest -q \
+  --deselect=tests/test_telemetry.py::test_command_receiver_ignores_old_episode_and_timeout_only_requests_relaxation
+.venv/bin/python3 scripts/report_arm_exploration.py \
+  --roots runs/arm_exploration/stall_audited_continuation \
+  --output runs/arm_exploration/audited_comparison.json
+.venv/bin/python3 runs/arm_exploration/analyze_audited_continuation.py
+```
+
+Тесты: **191 passed,1 deselected,6 warnings in80,04 s**. Исключён только
+ранее проверенный вне sandbox UDP-loopback тест:создание socket здесь запрещено.
+Это не заявление о новом полном запуске192 passed.
+
+Продолжение с неизменными физикой/PPO/LR/reward завершилось после114688
+переходов,6825 optimizer steps,1247,1 s по`train_and_validation_stage_passed`.
+Отдельный deterministic assessment подтвердил **18/18 train;0,800°**,
+**27/27 validation;1,027°**,**8/8 test;0,670°**,failures0 во всех наборах.
+Все policy tensors/contract/timestep best и last совпали. Runner/audit
+source snapshots совпали с SHA в metadata. В журнале572 завершённых
+учебных эпизода;script анализа использует исходные traces,не повторный
+frozen-policy replay. Test оценивался после выбора checkpoint и остаётся
+известным набором прошлых опытов,а не новым независимым holdout.
+Подробные результаты и ограничения —в журнале опыта;новые weights и данные
+остаются ignored в`runs/arm_exploration/`.
+
+Headless demo отдельно запущен с новым best,`--mass 2 --tilt 120
+--initial-angle 135 --target 135 --seconds 4 --output
+runs/arm_exploration/stall_audited_continuation/demo_135_tilt120.jsonl`:
+200 native v2 telemetry строк,4,0 s,failure false,full RMSE4,713°.
+Этот full RMSE включает начальный переходный процесс;tail RMSE2,442°
+получен отдельно в assessment,их не смешиваем. Viewer/GLFW не запускался.
+Полный gzip-аудит прочитан до конца:114688 переходов;runner/audit/exploration
+source snapshots совпали также с текущими файлами. Все свои training,
+assessment,analysis,test и demo jobs завершены с exit0.
+
+## Причинное исследование при застое — 2026-11-10
+
+Протокол: [arm-stagnation-exploration.md](arm-stagnation-exploration.md).
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q tests/test_arm_exploration.py \
+    tests/test_arm_reward_curriculum.py tests/test_arm_workload.py
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q
+```
+
+Целевой запуск: **8 passed in7,06 s**. Полный: **189 passed,1 failed in67,44 s**;
+единственная ошибка —sandbox запрещает создание UDP socket в
+`test_command_receiver_ignores_old_episode_and_timeout_only_requests_relaxation`.
+Этот же тест отдельно повторён с тем же resource-prefix вне sandbox:
+**1 passed in0,18 s**. Это не единый полный запуск190 passed.
+Проверены detector/reset,неизменность native transitions/reward,перенос функций
+и RMSprop,равенство PPO forward/evaluate_actions log probabilities при pressure1,
+рост variance без сдвига mean,конечные градиенты,реальное PPO-обновление и strict
+checkpoint roundtrip с сохранением optimizer state. Эти проверки не устанавливают
+качество движения;парное обучение/assessment выполняются отдельно.
+
+Парный пилот завершён:по65536 переходов. Off train13/18,val14/27;7,500°,test4/8;
+7,799°;stall train14/18,val17/27;4,891°,test6/8;2,714°. Все deterministic,
+failures0. Best=last в обеих ветвях;при assessment проверено равенство всех
+policy tensors/contract/timestep,результаты last повторно использованы.
+SGD5044/4995 (target-KL активен),время475,92/482,45 с. Контракты исходной
+физики/reward не менялись. Внешний read-only `/proc` probe подтвердил CPU12–15,
+nice19 всех6 собственных процессов и summed RSS2,133 GiB между оценками.
+
+```bash
+# Каждая команда с тем же nice/ionice/taskset/OMP/BLAS-prefix выше.
+.venv/bin/python3 scripts/train_arm_exploration.py --mode off --root runs/arm_exploration/off
+.venv/bin/python3 scripts/train_arm_exploration.py --mode stall --root runs/arm_exploration/stall
+.venv/bin/python3 scripts/report_arm_exploration.py --roots runs/arm_exploration/off runs/arm_exploration/stall
+```
+
+В standalone head probe100000 samples из сохранённых screenshot-alpha/beta
+при pressure1 доли>95% у TRIlong/TRIlat/TRImed43,03/2,06/17,46%;средние сохранены.
+Это проверка распределения,не движение. После добавления resume/adaptive stop
+в runner целевые проверки повторены:**2 passed in4,88 s**,в том числе перенос
+уже156-channel модели без потери tensors/counters. AST4 новыхPython-файлов passed.
+Строгий policy module после пилота не изменялся;исходный runner сохранён
+в каждом root,а продолжение использует новый runner snapshot.
+
+Завершены ещё две фазы stall:131072(23/27;2,408°,stop`budget_cap`) и32768
+(25/27;1,192°,stop`validation_stage_passed`). Initial каждого совпал с last
+parent. Вторая фаза использовала`--steps0 --adaptive-stop` и перенесённый
+reference/counter;она остановилась по gate,а не по плато. Source module
+policy/physics не менялся. Итог от общего parent:229376 новых переходов.
+
+```bash
+# Все команды с тем же resource-prefix,последовательно.
+.venv/bin/python3 scripts/report_arm_exploration.py \
+  --roots runs/arm_exploration/stall_continuation runs/arm_exploration/stall_until_plateau \
+  --output runs/arm_exploration/continuation_comparison.json
+.venv/bin/python3 runs/arm_exploration/diagnose_final.py
+.venv/bin/python3 scripts/demo_arm_preacher.py \
+  --controller runs/arm_exploration/stall_until_plateau/best.zip \
+  --mass 2 --tilt 135 --initial-angle 125 --target 125 --seconds 4
+.venv/bin/python3 scripts/demo_arm_preacher.py --seconds .2
+```
+
+Все exit0. Final train16/18;1,291°,validation25/27;1,192°,отдельная
+проверка6/8;2,666°,physical failures0. Полный18/18 train-gate не пройден,
+экономизация не начиналась. Best/last tensors/contract/timestep совпадают
+в обеих фазах;assessment last переиспользован. Пробные14 frozen-policy
+прогонов(mean / base samples / broad samples) не участвовали в отборе;
+все passfalse по строгому критерию,failures0. На130° broad samples уменьшили
+tail error11,29→2,38…3,69°,но settled fraction лишь0,235…0,510.
+На135° broad error6,24…6,83° против7,01° mean. Это иллюстрация остаточных
+режимов,не новый статистический benchmark.
+
+Новый demo checkpoint прошёл4-секундный headless запуск125→125°,mass2,tilt135:
+failurefalse,full RMSE3,011°(включает переходный процесс). Старый default controller
+загружен и прошёл0,2-секундный smoke безfailure;это не проверка точности движения.
+Native GLFW/view/input здесь не запускались. Demo поддерживает строгие
+exploration/reward loaders и явные initial/target;старые defaults сохранены.
+
+После добавления переноса plateau-состояния целевые тесты:**3 passed in5,88 s**;
+проверка защищает accumulated reference от подмены любым малым новым best.
+После прогонов runner дополнен сохранением block counter до выхода по gate
+и восстановлением счётчика старых gate-summary по history:это исправление
+остановки будущих продолжений,не изменение выполненных policy/rollouts.
+Финальный повтор целевого файла:**3 passed in4,99 s**. AST5 новых/изменённых
+Python-файлов passed;для всех4 roots подтверждены завершённый status,SHA best
+checkpoint,неизменный exploration source и соответствие runner snapshot его
+записанному SHA. `git diff --check` без ошибок. Все собственные training,
+assessment,probe и headless sessions завершились exit0;обучения в фоне не оставлено.
+
+## Выходная Beta-head на проблемных состояниях — 2026-11-10
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 runs/problem_poses/inspect_output_head.py
+```
+
+Exit 0. Три screenshot-состояния воспроизведены; конечные углы совпали с
+manifest с допуском1e−8°. Прочитаны raw logits,alpha,beta,mean,STD и производные
+среднего по logits;по100000 Beta samples/состояние с seed0. Выход
+`Linear(128,12)→Softplus+0.05→Beta`,deterministic mean;скрытые функции SiLU.
+У трёх разгибателей при q142,48° alpha22,023/12,229/24,274,
+beta5,193/19,166/10,974:floor0,05 не достигнут. P(u>0,95) соответственно
+0,0064332/4,9446e−18/5,4959e−7 при фиксированном состоянии.
+Хвосты добавлены отдельным проходом по сохранённым параметрам без повторной
+симуляции:96-node Gauss–Legendre, независимая сверка192 nodes для всех36
+интегралов (18 мышечных распределений×2 порога),max relative difference
+8,01e−13,exit0. Script затем дополнен этим же расчётом для повторяемости.
+Исходные данные —ignored `runs/problem_poses/output_head.json`.
+Это диагностика выходов,не история нахождения действий во время PPO.
+Код policy/физики и веса не изменялись;новое обучение/pytest не запускались.
+
+## Эвристика из идентичных проваленных состояний — 2026-11-10
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 runs/problem_poses/same_state_heuristic.py
+```
+
+Exit 0. Три learned-прогона воспроизведены до 4 с, затем команды заменены
+эвристикой на 2 с без вмешательства в физическое состояние/задержки. Изменён
+только горизонт truncation 4→6 с при reset; на 4 с углы, скорости, активации,
+силы, плечи сил, относительные длины волокон и capacity совпали с исходными
+кадрами с абсолютным допуском 1e−10. Первое попадание в ±1° от исходной цели
+через 0,64/0,70/0,94 с; конечные углы 124,973/119,971/29,923°, failures 0/3.
+Это времена пересечения полосы, не критерий времени установления.
+
+В отдельной диагностике копии мышц каждой исходной позы интегрированы 300 мс
+при фиксированной общей длине с неизменной первой командой сети/эвристики.
+Это не native-движение руки и не прогноз движущегося сустава. SHA исходных
+q/qvel/observation/полных muscle state vectors до и после проб совпал.
+При 142,48° net muscle torque сети/эвристики −6,543/−9,585 Н·м; при 20,52°
++7,466/+8,645 Н·м. В последней позе эвристика запрашивает BRA 42,23% вместо
+29,92% сети, при немного меньших командах бицепсу. Native endpoint-моменты
+антагонистов на исходных кадрах: 0,047/0,037/0,124 Н·м по модулю.
+Данные и код остаются в ignored `runs/problem_poses/`; таблицы в галерее.
+Обучение и код физики/контроллеров не менялись, pytest заново не запускался.
+
+## Силы и механические рычаги на проблемных снимках — 2026-11-10
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 runs/problem_poses/inspect_forces.py
+```
+
+Exit 0. Повторены три пары четырёхсекундных прогонов: конечные углы
+совпали с manifest снимков с точностью 1e−8°, активации — с абсолютным
+допуском 1e−10. На каждом шаге сохранены шесть сил сухожилий, плечи сил,
+моменты, активации, bias/constraint/passive-limit и состояние контакта.
+Артефакт — ignored `runs/problem_poses/muscle_forces.json`; таблицы добавлены
+в галерею. При цели 125° TRIlong сети даёт 555,92 Н × 4,61 мм = 2,57 Н·м,
+эвристики — 330,48 Н × 8,72 мм = 2,88 Н·м: сравнение активаций разных поз
+не отражает сравнение моментов. В старом E8 при цели 30° подтверждена
+поддержка пассивного ограничителя 1,224 Н·м в ошибочной позе 20,52°.
+Код симуляции, policy и условия не менялись; новых обучений не проводилось.
+
+## Скриншоты проблемных положений — 2026-11-10
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env MUJOCO_GL=egl \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 runs/problem_poses/capture.py
+```
+
+Exit0. Сохранены и визуально просмотрены7 PNG1440×1080:три пары policy/heuristic
+и дополнительный кадр контактных оболочек. Снимки на4-й секунде реальных
+deterministic-прогонов с2 кг. Два примера —selected final position-only,
+третий —E8 (это явно подписано). Наклон/условия/камера совпадают внутри пары;
+camera fit уточнён для целевой/провальной позы на private render model/data.
+Первый общий-ROM render тоже завершился exit0,затем заменён более читаемым fit.
+
+Пары q policy/heuristic:target125°,tilt135° —142,476/125,015°;
+130→120°,tilt120° —142,437/120,010°;
+target30°,tilt45° —20,519/29,988° (E8).
+Для каждого кадра SHA integration-state MuJoCo,полных muscle states,
+observations и telemetry до/после рендера совпал. Это не тест GLFW-окна/ввода.
+Core physics/viewer не изменялись;новые pytest для получения снимков не нужны.
+PNG headers/dimensions,завершение manifest и source SHA проверены отдельным
+stdlib-скриптом. Полные условия/идентичности policy —в `runs/problem_poses/manifest.json`,
+галерея —`runs/problem_poses/README.md`. Все снимки и их source остаются в ignored runs/.
+
+## Завершение поэтапной награды и активации эвристики — 2026-11-10
+
+После paired65536-transition пилотов position-only продолжена adaptive-фазой
+из last. Initial validation побитово равна parent last; stopping initial-check
+не считается учебным прогрессом. После229376 переходов/17549 SGD фаза
+завершилась exit0 по`validation_plateau_two_blocks`,best/last13/27;7,97351°.
+Все training/evaluation выполнялись последовательно,nice19,CPU12–15,
+ionice idle,Torch/BLAS1. При освобождении evaluation-пула проверены6 собственных
+процессов и summed RSS2,131 GiB между проверками;affinity/nice сохранены.
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/evaluate_arm_reward_curriculum.py \
+  --roots runs/arm_reward_curriculum/native runs/arm_reward_curriculum/position_only \
+    runs/arm_reward_curriculum/position_continuation --workers 2 --include-test
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 runs/arm_reward_curriculum/contact_escape_source.py
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/audit_arm_reward_rollout.py \
+  --controllers runs/arm_reward_curriculum/native/best.zip \
+    runs/arm_reward_curriculum/position_only/best.zip \
+    runs/arm_reward_curriculum/position_continuation/best.zip \
+  --output runs/arm_reward_curriculum/reward_rollout_1p5kg.json --angle 125 --tilt 135 --mass 1.5
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 scripts/probe_arm_heuristic_activation.py
+```
+
+Все exit0. Train/test native10/18 и2/8;position-only pilot10/18 и2/8;
+после продолжения13/18 и4/8. Test не использовался для выбора checkpoint
+или продолжительности обучения;physical failures0. Схемы/контракты checkpoint
+проверены loader,outputs сохранены в ignored roots. Экономизация не запускалась.
+Escape-проба:три одинаковых состояния на2 с подтверждены SHA256;из142,45°
+эвристика пересекла125° через0,68 с,full extensors —через0,52 с,learned не вышла.
+Моментные значения относятся к endpoint,не среднему по20-ms интервалу.
+Проба эвристики прошла52/52 известных провальных условий сетей;выходы
+возбуждения и активации не смешивались. Максимальный sampled-пик бицепса59,67%,
+трицепса≈100%;tail-max30,30% и64,35% соответственно.
+Попытка построить необязательную Matplotlib-фигуру завершилась
+`ModuleNotFoundError`:библиотеки нет в venv. Зависимости не устанавливались,
+результаты представлены таблицами/JSON. Новых регрессионных прогонов после
+изменения только runner/диагностик не добавляли;проверки reward/serialization ниже.
+Финальные AST-проверки7 изменённых/новых Python-файлов прошли;для всех3
+выбранных policy подтверждены SHA checkpoint,pinned workload/reward source
+и сохранённого runner snapshot. `git diff --check` без ошибок.
+
+## Поэтапная награда руки — 2026-11-09
+
+План: [arm-reward-curriculum.md](arm-reward-curriculum.md).
+
+```bash
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q tests/test_arm_reward_curriculum.py tests/test_arm_workload.py
+nice -n 19 ionice -c 3 taskset -c 12-15 env \
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  .venv/bin/python3 -m pytest -q
+```
+
+Первая команда:6 passed in5,00 s. Полный запуск:187 passed,1 failed in67,88 s;
+единственный failure — запрет создания UDP-сокета sandbox в
+`test_command_receiver_ignores_old_episode_and_timeout_only_requests_relaxation`.
+Повтор только этого теста вне sandbox:1 passed in0,19 s. Это два запуска,
+не единый прогон188 passed. `git diff --check` без ошибок.
+Pinned SHA `arm_workload.py` совпал с контрактом родителя E10.
+Новые контракт/loader/reward не делают старые checkpoint совместимыми молча.
+Training-результаты записываются отдельно после фактического завершения.
+
+## Разбор провалов по ориентации руки — 2026-11-09
+
+Локальной `.venv/bin/python3` выполнена агрегация сохранённых `best_validation`
+и `best_test` E8/E10:144 строки на модель,12 на каждый наклон. Проверены размеры
+групп и48/48 pass при0,75 kg у обеих моделей. Статические моменты восстановлены
+из `runs/arm_workload_audit/audit.json` через `C+A*cos(tilt)+B*sin(tilt)`;
+assert остатка<1e−12 Nm выполнен для всех использованных поз. Exit0;
+сводка `runs/arm_workload/angle_analysis.json`,описание E13 в журнале.
+Новых симуляций/обучения не было. Менялись только документы; pytest не запускался.
+
+Для E14 той же `.venv/bin/python3` прочитаны tail-активации E8/E10 и временные
+ряды `hold_joint/preload_probe_2kg.json`; exit0. Числа в таблице — средние
+трёх сгибателей/трёх разгибателей, не силы и не проценты запаса момента.
+
+Для E15 stdlib-скриптом `.venv/bin/python3` сверены сохранённые reward terms,
+суммы tail-наград и аналитический пример position/velocity; exit0. Assert
+подтвердил более высокую tail-награду heuristic и разность excitation-cost
+меньше1e−5 до multiplier. Использована формула с `1-exp(-1)` из
+`arm_precision.py`. Результат:`runs/arm_workload/reward_balance_analysis.json`.
+Физика,награда и policy не изменялись; новых training/evaluation прогонов нет.
+
 ## Ограничение фонового обучения на ноутбуке — 2026-11-09
 
 По просьбе владельца оставлен один основной опыт `hold_joint`. Для его дерева

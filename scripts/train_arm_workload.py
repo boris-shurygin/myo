@@ -23,6 +23,7 @@ from myo.arm_workload import (ArmWorkloadEnv, WorkloadSpec, make_workload_model,
     load_workload, save_workload, scenarios, evaluate_workload, validation_rank, stage_passed)
 from myo.train_vertical_ppo import write_json
 from myo.arm_workload_evaluation import evaluate_parallel
+from myo.arm_reward_curriculum import ArmRewardCurriculumEnv, RewardStage, load_reward_curriculum
 
 
 HOLDS = tuple((q,q) for q in (30,60,90,120))
@@ -59,12 +60,16 @@ def profile(stage):
     raise ValueError('Unknown stage')
 
 
-def worker_env(spec,worker,workers):
-    return Monitor(ArmWorkloadEnv(spec,worker=worker,workers=workers))
+def worker_env(spec,worker,workers,reward_stage=None):
+    env = (ArmWorkloadEnv(spec,worker=worker,workers=workers) if reward_stage is None else
+           ArmRewardCurriculumEnv(spec,reward_stage,worker=worker,workers=workers))
+    return Monitor(env)
 
 
 def load_parent(path):
     meta=json.loads(Path(str(path)+'.metadata.json').read_text())
+    if meta['contract']['schema']=='myo.arm_reward_curriculum.v1':
+        return load_reward_curriculum(path)
     return (load_workload if meta['contract']['schema']=='myo.arm_workload.v1' else load_arm)(path)
 
 
@@ -106,12 +111,21 @@ def train(args):
         capacities=(tuple(args.validation_capacities) if args.validation_capacities is not None
                     else tuple(sorted({c['capacity'] for c in validation})))
         validation=scenarios(cases,masses=masses,tilts=tilts,capacities=capacities)
-    checking=ArmWorkloadEnv(spec)
+    if args.validation_file is not None:
+        validation=json.loads(args.validation_file.read_text())
+        if not isinstance(validation,list) or not validation:
+            raise ValueError('Validation manifest must be a nonempty condition list')
+    reward_stage=RewardStage(args.reward_mode) if args.reward_mode is not None else None
+    if args.reward_mode=='position_only' and (spec.activation_squared_weight or spec.active_fraction_weight):
+        raise ValueError('Position-only stage must not silently discard requested efficiency weights')
+    checking=(ArmWorkloadEnv(spec) if reward_stage is None else ArmRewardCurriculumEnv(spec,reward_stage))
     contract=checking.contract()
     parent,parent_env,parent_meta=load_parent(args.parent);parent_env.close()
     assert parent.policy.feature_mode=='none'
-    vector=SubprocVecEnv([partial(worker_env,spec,i,args.workers) for i in range(args.workers)],start_method='spawn')
-    evaluation_pool=ProcessPoolExecutor(max_workers=args.workers,mp_context=multiprocessing.get_context('spawn'))
+    vector=SubprocVecEnv([partial(worker_env,spec,i,args.workers,reward_stage) for i in range(args.workers)],start_method='spawn')
+    evaluation_workers=args.evaluation_workers or args.workers
+    evaluation_pool=(None if args.release_evaluation_workers else ProcessPoolExecutor(
+        max_workers=evaluation_workers,mp_context=multiprocessing.get_context('spawn')))
     try:
         model=make_workload_model(vector,parent,contract,learning_rate=args.lr,n_steps=1024//args.workers)
         model.ent_coef=args.entropy
@@ -130,6 +144,13 @@ def train(args):
                 else 'tracking rank; auxiliary combined effort proxy does not determine stopping'),
             'spec':asdict(spec),'versions':{k:version(k) for k in ('torch','stable-baselines3','mujoco','numpy')},
             'runner_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+        training['evaluation_resources']={'workers':evaluation_workers,
+            'release_between_checks':args.release_evaluation_workers,
+            'scope':'independent deterministic episodes; no change to PPO rollout state or RNG'}
+        if reward_stage is not None:
+            training['reward_stage']=asdict(reward_stage)
+        if args.validation_file is not None:
+            training['validation_manifest_sha256']=hashlib.sha256(args.validation_file.read_bytes()).hexdigest()
         source_steps,source_sgd=model.num_timesteps,model.optimizer_steps
         summary={'status':'running','training':training,'contract':contract,'history':[],'updates':[],
             'source_steps':source_steps,'source_optimizer_steps':source_sgd,'blocks_without_progress':0}
@@ -148,7 +169,12 @@ def train(args):
         def check():
             nonlocal best,reference,progress_in_block,best_energy,initial
             save_workload(model,checking,args.root/'candidate.zip',training)
-            result=evaluate_parallel(evaluation_pool,args.root/'candidate.zip',validation,args.workers)
+            if evaluation_pool is None:
+                with ProcessPoolExecutor(max_workers=evaluation_workers,
+                        mp_context=multiprocessing.get_context('spawn')) as pool:
+                    result=evaluate_parallel(pool,args.root/'candidate.zip',validation,evaluation_workers)
+            else:
+                result=evaluate_parallel(evaluation_pool,args.root/'candidate.zip',validation,evaluation_workers)
             if initial is None:initial=result
             current=validation_rank(result)
             if best is None or current<best:
@@ -181,6 +207,9 @@ def train(args):
                 'elapsed_s':summary['elapsed_s']}),flush=True)
 
         check()
+        # The initial measurement establishes a reference; it is not learning
+        # progress inside the first subsequent block.
+        progress_in_block=False
         while True:
             model.learn(1024,reset_num_timesteps=False)
             summary['updates'].append({'steps':model.num_timesteps,**model.last_audit})
@@ -207,7 +236,9 @@ def train(args):
         print(json.dumps({'status':summary['status'],'stop':summary['stop_reason'],
                           'added':summary['added_transitions'],'best_deg':summary['best_validation']['score_deg']}),flush=True)
     finally:
-        vector.close();evaluation_pool.shutdown();checking.close()
+        vector.close()
+        if evaluation_pool is not None:evaluation_pool.shutdown()
+        checking.close()
 
 
 def main():
@@ -216,6 +247,9 @@ def main():
     p.add_argument('--root',type=Path,required=True)
     p.add_argument('--parent',type=Path,default=Path('runs/arm_continuation/best.zip'))
     p.add_argument('--workers',type=int,default=4)
+    p.add_argument('--evaluation-workers',type=int,choices=(1,2,4))
+    p.add_argument('--release-evaluation-workers',action='store_true',
+        help='Close independent evaluation workers between checks to release laptop memory')
     p.add_argument('--lr',type=float,default=3e-5)
     p.add_argument('--entropy',type=float,default=.001)
     p.add_argument('--minimum-steps',type=int,default=65536)
@@ -232,6 +266,10 @@ def main():
     p.add_argument('--validation-capacities',type=float,nargs='+')
     p.add_argument('--energy',type=float)
     p.add_argument('--fatigue',type=float)
+    p.add_argument('--reward-mode',choices=('native','position_only','position_efficiency'),
+        help='Separate reward contract; native preserves the comparison baseline exactly')
+    p.add_argument('--validation-file',type=Path,
+        help='Explicit JSON conditions for a local comparison; recorded with its SHA256')
     args=p.parse_args()
     if args.hold_start_offsets is not None and args.hold_targets is None:
         p.error('Hold start offsets require explicit hold targets')

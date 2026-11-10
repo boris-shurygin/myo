@@ -21,6 +21,8 @@ def main(argv=None):
     p.add_argument('--seconds', type=float)
     p.add_argument('--mass', type=float, help='Payload kg at reset; requires a workload policy')
     p.add_argument('--tilt', type=float, help='Fixed mount degrees at reset; requires a workload policy')
+    p.add_argument('--initial-angle', type=float, help='Initial elbow angle in degrees')
+    p.add_argument('--target', type=float, help='Initial target angle; keep fixed in headless mode')
     p.add_argument('--view', action='store_true')
     p.add_argument('--scripted', action='store_true', help='Cycle targets 75/20/105/45 deg every 4 s without resetting state')
     p.add_argument('--output', type=Path, help='Optional native v2 telemetry JSONL in runs/')
@@ -29,8 +31,16 @@ def main(argv=None):
         p.error('--seconds must be finite and positive')
     duration = args.seconds if args.seconds is not None else (None if args.view else 16.)
     header = json.loads(Path(str(args.controller)+'.metadata.json').read_text())
-    workload = header['contract'].get('schema') == 'myo.arm_workload.v1'
-    if workload:
+    schema = header['contract'].get('schema')
+    exploration = schema == 'myo.arm_exploration.v1'
+    workload = schema in ('myo.arm_workload.v1', 'myo.arm_reward_curriculum.v1', 'myo.arm_exploration.v1')
+    if exploration:
+        from myo.arm_exploration import load_exploration
+        model, env, metadata = load_exploration(args.controller)
+    elif schema == 'myo.arm_reward_curriculum.v1':
+        from myo.arm_reward_curriculum import load_reward_curriculum
+        model, env, metadata = load_reward_curriculum(args.controller)
+    elif workload:
         from myo.arm_workload import load_workload
         model, env, metadata = load_workload(args.controller)
     elif 'feature_comparison' in header['training']:
@@ -45,7 +55,13 @@ def main(argv=None):
     else:
         model, env, metadata = load_arm(args.controller)
     base = env.unwrapped
-    reset_options = {'case': (20, 75)}
+    initial, target = metadata['contract']['spec']['cases'][0] if exploration else (20, 75)
+    initial = initial if args.initial_angle is None else args.initial_angle
+    target = target if args.target is None else args.target
+    if not np.isfinite(initial) or not np.isfinite(target):
+        env.close()
+        p.error('Initial and target angles must be finite')
+    reset_options = {'case': (initial, target)}
     if args.mass is not None or args.tilt is not None:
         if not workload:
             env.close()
@@ -55,8 +71,10 @@ def main(argv=None):
             env.close()
             p.error('--mass must be positive and --tilt finite')
     if workload:
-        reset_options.update(payload_mass=1. if args.mass is None else args.mass,
-                             tilt_deg=30. if args.tilt is None else args.tilt, capacity=1.)
+        default_mass = metadata['contract']['spec']['masses'][0] if exploration else 1.
+        default_tilt = metadata['contract']['spec']['tilts'][0] if exploration else 30.
+        reset_options.update(payload_mass=default_mass if args.mass is None else args.mass,
+                             tilt_deg=default_tilt if args.tilt is None else args.tilt, capacity=1.)
     env.reset(seed=0, options=reset_options)
     viewer = None
     writer = None
@@ -67,7 +85,8 @@ def main(argv=None):
     try:
         if args.view:
             from myo.demo import DemoViewer
-            label = ('Learned PPO | '+metadata['training']['stage']+' | variable load/mount' if workload
+            stage = metadata['training'].get('stage', 'stagnation exploration' if exploration else 'positioning')
+            label = ('Learned PPO | '+stage+' | variable load/mount' if workload
                      else 'Learned PPO | positioning | tested goals 15-135 deg')
             viewer = DemoViewer(base, fixed_trigger=1., controller_label=label)
             print('Up/Down: target +/-5 deg; Space: pause; R: reset; F: fit camera; Esc: close.\n'
@@ -88,9 +107,14 @@ def main(argv=None):
                     viewer.draw(); time.sleep(.02)
                     started = time.perf_counter()-count*base.control_dt
                     continue
-            if args.scripted or viewer is None:
+            if args.scripted or (viewer is None and args.target is None and not exploration):
                 target = (75, 20, 105, 45)[int(base.time/4.) % 4]
                 base.set_command(float(np.deg2rad(target)), 1.)
+            if exploration and (env.detector.target is None or abs(env.detector.target-base.command.requested) > 1e-8):
+                # A manual/scripted goal change clears the old goal's detector
+                # before inference, without touching muscles, queues or motion.
+                env.detector.reset()
+                env.detector.update(float(base.data.qpos[base.qpos_index]), base.command.requested)
             action = model.predict(env.observation(), deterministic=True)[0]
             _, _, failed, truncated, info = env.step(action)
             count += 1
