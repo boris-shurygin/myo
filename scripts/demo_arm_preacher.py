@@ -32,9 +32,28 @@ def main(argv=None):
     duration = args.seconds if args.seconds is not None else (None if args.view else 16.)
     header = json.loads(Path(str(args.controller)+'.metadata.json').read_text())
     schema = header['contract'].get('schema')
-    exploration = schema == 'myo.arm_exploration.v1'
-    workload = schema in ('myo.arm_workload.v1', 'myo.arm_reward_curriculum.v1', 'myo.arm_exploration.v1')
-    if exploration:
+    timing = schema == 'myo.arm_timing.v1'
+    exploration = schema in ('myo.arm_exploration.v1', 'myo.arm_timing.v1', 'myo.arm_efficiency.v1',
+                            'myo.arm_relaxation.v1', 'myo.arm_weakening.v1', 'myo.arm_accumulated_economy.v1')
+    workload = schema in ('myo.arm_workload.v1', 'myo.arm_reward_curriculum.v1',
+                          'myo.arm_exploration.v1', 'myo.arm_timing.v1', 'myo.arm_efficiency.v1',
+                          'myo.arm_relaxation.v1', 'myo.arm_weakening.v1', 'myo.arm_accumulated_economy.v1')
+    if schema == 'myo.arm_accumulated_economy.v1':
+        from myo.arm_economy_curriculum import load_economy
+        model, env, metadata = load_economy(args.controller)
+    elif schema == 'myo.arm_weakening.v1':
+        from myo.arm_weakening import load_weakening
+        model, env, metadata = load_weakening(args.controller)
+    elif schema == 'myo.arm_relaxation.v1':
+        from myo.arm_relaxation import load_relaxation
+        model, env, metadata = load_relaxation(args.controller)
+    elif schema == 'myo.arm_efficiency.v1':
+        from myo.arm_efficiency import load_efficiency
+        model, env, metadata = load_efficiency(args.controller)
+    elif timing:
+        from myo.arm_timing import load_timing
+        model, env, metadata = load_timing(args.controller)
+    elif exploration:
         from myo.arm_exploration import load_exploration
         model, env, metadata = load_exploration(args.controller)
     elif schema == 'myo.arm_reward_curriculum.v1':
@@ -88,6 +107,8 @@ def main(argv=None):
             stage = metadata['training'].get('stage', 'stagnation exploration' if exploration else 'positioning')
             label = ('Learned PPO | '+stage+' | variable load/mount' if workload
                      else 'Learned PPO | positioning | tested goals 15-135 deg')
+            if schema in ('myo.arm_weakening.v1', 'myo.arm_accumulated_economy.v1'):
+                label = 'Learned | reduced effort (experimental)'
             viewer = DemoViewer(base, fixed_trigger=1., controller_label=label)
             print('Up/Down: target +/-5 deg; Space: pause; R: reset; F: fit camera; Esc: close.\n'
                   '1: tissues; 2: activation; 3: force; 4: strain; M: muscle; C: envelopes.\n'
